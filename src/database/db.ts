@@ -1,4 +1,6 @@
 import * as SQLite from 'expo-sqlite';
+import { PlanningRow } from '../types/database';
+import { normalizeNutrientValue } from '../utils/nutrition';
 
 // Ouverture de la base de données (MealCraft.db)
 export const db = SQLite.openDatabaseSync('mealcraft.db');
@@ -46,5 +48,26 @@ export const initDatabase = async () => {
     console.log("✅ Base de données initialisée (Tables prêtes)");
   } catch (error) {
     console.error("❌ Erreur SQL lors de l'initialisation :", error);
+  }
+};
+
+export const addToPlanning = async (recipe: any, date: string, mealSlot: 'lunch' | 'dinner', servings: number) => {
+  try {
+    // On extrait les nutriments principaux via notre utilitaire de normalisation
+    const calories = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Calories')?.amount);
+    const protein = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Protein')?.amount);
+    const fat = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Fat')?.amount);
+    const carbs = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Carbohydrates')?.amount);
+
+    await db.runAsync(
+      `INSERT INTO planning (date, meal_slot, recipe_id, recipe_title, consumed_servings, calories, protein_g, fat_g, carbs_g)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [date, mealSlot, recipe.id, recipe.title, servings, calories, protein, fat, carbs]
+    );
+    console.log("📅 Ajouté au planning avec succès !");
+    return true;
+  } catch (error) {
+    console.error("❌ Erreur lors de l'ajout au planning :", error);
+    return false;
   }
 };
