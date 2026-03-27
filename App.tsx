@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { initDatabase } from './src/database/db';
-import SearchScreen from './src/screens/SearchScreen';
+import RootNavigator from './src/navigation/RootNavigator';
+import { NavigationContainer } from '@react-navigation/native';
 
 export default function App() {
   useEffect(() => {
@@ -11,10 +11,9 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
-        <StatusBar style="dark" />
-        <SearchScreen />
-      </SafeAreaView>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }

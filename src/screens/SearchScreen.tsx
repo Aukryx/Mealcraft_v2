@@ -11,12 +11,14 @@ import {
 } from 'react-native';
 import { searchRecipesByIngredients } from '../api/recipes';
 import { SearchResult } from '../types/api';
+import { useNavigation } from '@react-navigation/native';
 
 export default function SearchScreen() {
   const [ingredient, setIngredient] = useState('');
   const [ingredientsList, setIngredientsList] = useState<string[]>([]);
   const [recipes, setRecipes] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const navigation = useNavigation<any>();
 
   const addIngredient = () => {
     if (ingredient.trim()) {
@@ -82,7 +84,7 @@ export default function SearchScreen() {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ paddingBottom: 20 }}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} activeOpacity={0.9}>
+          <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}>
             <Image source={{ uri: item.image }} style={styles.cardImage} />
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
