@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SearchScreen from '../screens/SearchScreen';
 import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 import PlanningScreen from '../screens/PlanningScreen';
-// import FavoritesScreen from '../screens/FavoritesScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
 
 // 1. Définition des types pour la navigation
 export type RootStackParamList = {
@@ -38,11 +38,11 @@ function TabNavigator() {
         component={PlanningScreen} 
         options={{ title: 'Planning', tabBarIcon: () => <Text>📅</Text> }} 
       />
-      {/* <Tab.Screen 
+      <Tab.Screen 
         name="FavoritesTab" 
         component={FavoritesScreen} 
         options={{ title: 'Favoris', tabBarIcon: () => <Text>❤️</Text> }} 
-      /> */}
+      />
     </Tab.Navigator>
   );
 }
