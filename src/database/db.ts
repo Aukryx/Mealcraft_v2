@@ -21,7 +21,7 @@ export const initDatabase = async () => {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
-      -- Table Planning (Issue #6)
+      -- Table Planning
       CREATE TABLE IF NOT EXISTS planning (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT NOT NULL,
@@ -36,7 +36,7 @@ export const initDatabase = async () => {
         FOREIGN KEY (recipe_id) REFERENCES recipes_cache (id) ON DELETE CASCADE
       );
 
-      -- Table Favoris (Issue #7)
+      -- Table Favoris
       CREATE TABLE IF NOT EXISTS favorites (
         recipe_id INTEGER PRIMARY KEY NOT NULL,
         added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -90,44 +90,50 @@ export const removeFromPlanning = async (id: number) => {
   }
 };
 
-// --- FONCTIONS FAVORIS (ISSUE #7) ---
-
 export const isFavorite = async (recipeId: number): Promise<boolean> => {
   try {
-    const row = await db.getFirstAsync<{recipe_id: number}>('SELECT recipe_id FROM favorites WHERE recipe_id = ?', [recipeId]);
+    const row = await db.getFirstAsync<{recipe_id: number}>(
+      'SELECT recipe_id FROM favorites WHERE recipe_id = ?', 
+      [recipeId]
+    );
     return !!row;
   } catch (error) {
     return false;
   }
 };
 
+/**
+ * Ajoute ou retire une recette des favoris
+ */
 export const toggleFavorite = async (recipeId: number) => {
   try {
     const exists = await isFavorite(recipeId);
     if (exists) {
       await db.runAsync('DELETE FROM favorites WHERE recipe_id = ?', [recipeId]);
-      return false;
+      return false; // Retiré
     } else {
       await db.runAsync('INSERT INTO favorites (recipe_id) VALUES (?)', [recipeId]);
-      return true;
+      return true; // Ajouté
     }
   } catch (error) {
-    console.error("❌ Erreur toggleFavorite :", error);
+    console.error("Erreur toggleFavorite", error);
     return false;
   }
 };
 
+/**
+ * Récupère la liste complète avec les infos du cache
+ */
 export const getAllFavorites = async () => {
   try {
-    // Jointure avec recipes_cache pour avoir les infos (titre, image) dans la liste des favoris
     return await db.getAllAsync<any>(`
-      SELECT f.recipe_id, r.title, r.image_url 
+      SELECT f.recipe_id as id, r.title, r.image_url 
       FROM favorites f
       JOIN recipes_cache r ON f.recipe_id = r.id
       ORDER BY f.added_at DESC
     `);
   } catch (error) {
-    console.error("❌ Erreur getAllFavorites :", error);
+    console.error("Erreur getAllFavorites", error);
     return [];
   }
 };
