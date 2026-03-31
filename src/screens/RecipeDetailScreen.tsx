@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { 
+  View, Text, ScrollView, Image, StyleSheet, ActivityIndicator, 
+  TouchableOpacity, Alert, Modal, Platform 
+} from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { getRecipeInformation } from '../api/recipes';
 import { RecipeDetail } from '../types/api';
@@ -12,11 +16,16 @@ export default function RecipeDetailScreen() {
   
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [servings, setServings] = useState(1);
   const [isFav, setIsFav] = useState(false);
 
+  // States pour le Planning & Modal
+  const [servings, setServings] = useState(1);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [mealSlot, setMealSlot] = useState<'lunch' | 'dinner'>('lunch');
+
   useEffect(() => {
-    // Chargement des données de la recette et du statut favori
     Promise.all([
       getRecipeInformation(recipeId),
       isFavorite(recipeId)
@@ -35,49 +44,41 @@ export default function RecipeDetailScreen() {
     setIsFav(newState);
   };
 
-  const handleAddToPlanning = async (slot: 'lunch' | 'dinner') => {
+  const confirmAddToPlanning = async () => {
     if (!recipe) return;
-    const today = new Date().toISOString().split('T')[0];
-    const success = await addToPlanning(recipe, today, slot, servings);
+    // Formatage de la date en YYYY-MM-DD local
+    const dateString = selectedDate.toISOString().split('T')[0];
+    
+    const success = await addToPlanning(recipe, dateString, mealSlot, servings);
     if (success) {
-      Alert.alert("Succès", `Ajouté au repas du ${slot === 'lunch' ? 'midi' : 'soir'} !`);
+      setShowModal(false);
+      Alert.alert("🎉 Planifié !", `La recette a été ajoutée pour le ${selectedDate.toLocaleDateString('fr-FR')}.`);
     }
   };
 
   if (loading) return (
-    <View style={styles.center}>
-      <ActivityIndicator size="large" color="#00B894" />
-    </View>
+    <View style={styles.center}><ActivityIndicator size="large" color="#00B894" /></View>
   );
 
   if (!recipe) return (
-    <View style={styles.center}>
-      <Text>Erreur lors du chargement de la recette.</Text>
-    </View>
+    <View style={styles.center}><Text>Recette introuvable.</Text></View>
   );
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header Image avec bouton Favoris */}
+      {/* Header Image & Favoris */}
       <View style={styles.imageContainer}>
         <Image source={{ uri: recipe.image }} style={styles.image} />
-        <TouchableOpacity 
-          style={styles.favCircle} 
-          onPress={handleToggleFavorite}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.favCircle} onPress={handleToggleFavorite}>
           <Text style={{ fontSize: 24 }}>{isFav ? '❤️' : '🤍'}</Text>
         </TouchableOpacity>
       </View>
       
       <View style={styles.content}>
         <Text style={styles.title}>{recipe.title}</Text>
-        <Text style={styles.subtitle}>
-          ⏱️ {recipe.readyInMinutes} min  •  🍽️ {recipe.servings} portions d'origine
-        </Text>
+        <Text style={styles.subtitle}>⏱️ {recipe.readyInMinutes} min  •  🍴 {recipe.servings} portions</Text>
 
-        {/* Nutrition Grid */}
-        <Text style={styles.sectionTitle}>Nutrition (par portion)</Text>
+        {/* Grille Nutritionnelle */}
         <View style={styles.nutritionGrid}>
           {recipe.nutrition?.nutrients.slice(0, 4).map((n, i) => (
             <View key={i} style={styles.nutritionItem}>
@@ -90,53 +91,84 @@ export default function RecipeDetailScreen() {
         {/* Instructions */}
         <Text style={styles.sectionTitle}>Instructions</Text>
         <Text style={styles.instructions}>
-          {recipe.instructions ? recipe.instructions.replace(/<[^>]*>?/gm, '') : "Aucune instruction disponible."}
+          {recipe.instructions ? recipe.instructions.replace(/<[^>]*>?/gm, '') : "Préparation non détaillée."}
         </Text>
 
         <View style={styles.divider} />
 
-        {/* Sélecteur de portions pour le planning */}
-        <Text style={styles.sectionTitle}>Planifier ce repas</Text>
-        <Text style={styles.label}>Combien de portions allez-vous consommer ?</Text>
-        
-        <View style={styles.servingsSelector}>
-          <TouchableOpacity 
-            onPress={() => setServings(Math.max(1, servings - 1))} 
-            style={styles.serveBtn}
-          >
-            <Text style={styles.serveBtnText}>-</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.servingsDisplay}>
-            <Text style={styles.servingsText}>{servings}</Text>
-            <Text style={styles.servingsSub}>portion(s)</Text>
-          </View>
-
-          <TouchableOpacity 
-            onPress={() => setServings(servings + 1)} 
-            style={styles.serveBtn}
-          >
-            <Text style={styles.serveBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Boutons d'action Planning */}
-        <View style={styles.actionRow}>
-          <TouchableOpacity 
-            style={[styles.planButton, {backgroundColor: '#0984E3'}]} 
-            onPress={() => handleAddToPlanning('lunch')}
-          >
-            <Text style={styles.planButtonText}>Midi</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.planButton, {backgroundColor: '#6C5CE7'}]} 
-            onPress={() => handleAddToPlanning('dinner')}
-          >
-            <Text style={styles.planButtonText}>Soir</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Bouton pour ouvrir la planification */}
+        <TouchableOpacity 
+            style={styles.mainPlanBtn} 
+            onPress={() => setShowModal(true)}
+        >
+          <Text style={styles.mainPlanBtnText}>Ajouter au Planning 📅</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* --- MODAL DE PLANIFICATION --- */}
+      <Modal visible={showModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Planifier mon repas</Text>
+
+            {/* 1. Sélecteur de portions */}
+            <Text style={styles.modalLabel}>Combien de portions ?</Text>
+            <View style={styles.servingsRow}>
+              <TouchableOpacity onPress={() => setServings(Math.max(1, servings - 1))} style={styles.stepBtn}>
+                <Text style={styles.stepBtnText}>-</Text>
+              </TouchableOpacity>
+              <Text style={styles.servingsVal}>{servings}</Text>
+              <TouchableOpacity onPress={() => setServings(servings + 1)} style={styles.stepBtn}>
+                <Text style={styles.stepBtnText}>+</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* 2. Sélecteur de Date */}
+            <Text style={styles.modalLabel}>Pour quel jour ?</Text>
+            <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.dateText}>{selectedDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, date) => {
+                  setShowDatePicker(false);
+                  if (date) setSelectedDate(date);
+                }}
+              />
+            )}
+
+            {/* 3. Choix Midi / Soir */}
+            <View style={styles.slotRow}>
+              <TouchableOpacity 
+                style={[styles.slotBtn, mealSlot === 'lunch' && styles.slotActive]} 
+                onPress={() => setMealSlot('lunch')}
+              >
+                <Text style={[styles.slotBtnText, mealSlot === 'lunch' && styles.textWhite]}>☀️ Midi</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.slotBtn, mealSlot === 'dinner' && styles.slotActive]} 
+                onPress={() => setMealSlot('dinner')}
+              >
+                <Text style={[styles.slotBtnText, mealSlot === 'dinner' && styles.textWhite]}>🌙 Soir</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Actions finales */}
+            <View style={styles.footerActions}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)}>
+                <Text style={styles.cancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmBtn} onPress={confirmAddToPlanning}>
+                <Text style={styles.confirmText}>Confirmer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -145,75 +177,44 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   imageContainer: { position: 'relative' },
-  image: { width: '100%', height: 280 },
+  image: { width: '100%', height: 260 },
   favCircle: {
-    position: 'absolute',
-    bottom: -25,
-    right: 25,
-    backgroundColor: '#FFF',
-    width: 55,
-    height: 55,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
+    position: 'absolute', bottom: -25, right: 25, backgroundColor: 'white',
+    width: 55, height: 55, borderRadius: 30, justifyContent: 'center', alignItems: 'center',
+    elevation: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 5,
   },
   content: { padding: 20, paddingTop: 30 },
-  title: { fontSize: 26, fontWeight: 'bold', color: '#2D3436', marginBottom: 5 },
-  subtitle: { fontSize: 15, color: '#636E72', marginBottom: 20 },
-  sectionTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 15, marginBottom: 12, color: '#2D3436' },
-  label: { fontSize: 14, color: '#636E72', marginBottom: 10 },
-  nutritionGrid: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    backgroundColor: '#F8F9FA', 
-    padding: 15, 
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F1F2F6'
-  },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#2D3436' },
+  subtitle: { fontSize: 14, color: '#636E72', marginVertical: 10 },
+  nutritionGrid: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#F8F9FA', padding: 15, borderRadius: 15, marginVertical: 15 },
   nutritionItem: { alignItems: 'center' },
-  nutriValue: { fontWeight: 'bold', fontSize: 16, color: '#2D3436' },
-  nutriLabel: { fontSize: 11, color: '#636E72', marginTop: 2 },
-  instructions: { fontSize: 16, lineHeight: 26, color: '#444', textAlign: 'justify' },
-  divider: { height: 1, backgroundColor: '#EEE', marginVertical: 25 },
-  
-  servingsSelector: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginVertical: 15,
-    backgroundColor: '#F8F9FA',
-    padding: 15,
-    borderRadius: 20
-  },
-  serveBtn: { 
-    backgroundColor: '#FFF', 
-    width: 45, 
-    height: 45, 
-    borderRadius: 22, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#DFE6E9',
-    elevation: 2
-  },
-  serveBtnText: { fontSize: 24, fontWeight: 'bold', color: '#2D3436' },
-  servingsDisplay: { alignItems: 'center', marginHorizontal: 30 },
-  servingsText: { fontSize: 28, fontWeight: 'bold', color: '#00B894' },
-  servingsSub: { fontSize: 12, color: '#636E72' },
+  nutriValue: { fontWeight: 'bold', fontSize: 15 },
+  nutriLabel: { fontSize: 11, color: '#636E72' },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginTop: 20, marginBottom: 10 },
+  instructions: { fontSize: 15, lineHeight: 24, color: '#444' },
+  divider: { height: 1, backgroundColor: '#F1F2F6', marginVertical: 25 },
+  mainPlanBtn: { backgroundColor: '#00B894', padding: 18, borderRadius: 15, alignItems: 'center' },
+  mainPlanBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
 
-  actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, marginBottom: 40 },
-  planButton: { 
-    flex: 0.48, 
-    padding: 18, 
-    borderRadius: 15, 
-    alignItems: 'center',
-    elevation: 3
-  },
-  planButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 18 },
+  // Styles Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  modalLabel: { fontSize: 14, fontWeight: '600', color: '#636E72', marginBottom: 10 },
+  servingsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8F9FA', padding: 10, borderRadius: 15, marginBottom: 20 },
+  stepBtn: { width: 40, height: 40, backgroundColor: '#FFF', borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 2 },
+  stepBtnText: { fontSize: 20, fontWeight: 'bold' },
+  servingsVal: { fontSize: 24, fontWeight: 'bold', marginHorizontal: 30 },
+  datePickerBtn: { padding: 15, backgroundColor: '#F8F9FA', borderRadius: 12, alignItems: 'center', marginBottom: 20 },
+  dateText: { fontSize: 16, color: '#00B894', fontWeight: 'bold' },
+  slotRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
+  slotBtn: { flex: 0.48, padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#DFE6E9', alignItems: 'center' },
+  slotActive: { backgroundColor: '#0984E3', borderColor: '#0984E3' },
+  slotBtnText: { fontWeight: 'bold', color: '#2D3436' },
+  textWhite: { color: '#FFF' },
+  footerActions: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  cancelBtn: { flex: 0.4, padding: 15, alignItems: 'center' },
+  cancelText: { color: '#FF7675', fontWeight: 'bold' },
+  confirmBtn: { flex: 0.55, backgroundColor: '#00B894', padding: 15, borderRadius: 12, alignItems: 'center' },
+  confirmText: { color: '#FFF', fontWeight: 'bold' },
 });
