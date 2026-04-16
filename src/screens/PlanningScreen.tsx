@@ -177,7 +177,7 @@ export default function PlanningScreen() {
             <Text style={styles.emptyText}>Aucun repas prévu pour ce jour.</Text>
             <TouchableOpacity 
               style={styles.addBtn}
-              onPress={() => navigation.navigate('MainTabs')}
+              onPress={() => navigation.navigate('MainTabs', { initialTab: 'SearchTab' })}
             >
               <Text style={styles.addBtnText}>Ajouter une recette</Text>
             </TouchableOpacity>
