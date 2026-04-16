@@ -12,6 +12,7 @@ import {
 import { searchRecipesByIngredients } from '../api/recipes';
 import { SearchResult } from '../types/api';
 import { translateIngredients } from '../utils/ingredients';
+import { useLanguage } from '../context/LanguageContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
@@ -22,6 +23,7 @@ export default function SearchScreen() {
   const [recipes, setRecipes] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { isFr } = useLanguage();
 
   const addIngredient = () => {
     if (ingredient.trim()) {
@@ -89,7 +91,7 @@ export default function SearchScreen() {
           <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}>
             <Image source={{ uri: item.image }} style={styles.cardImage} />
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+              <Text style={styles.cardTitle} numberOfLines={1}>{isFr && item.title_fr ? item.title_fr : item.title}</Text>
               <Text style={styles.cardSubtitle}>
                 ⚠️ Manque {item.missedIngredientCount} ingrédient(s)
               </Text>

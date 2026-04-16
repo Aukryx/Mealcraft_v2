@@ -9,6 +9,7 @@ import { RootStackParamList } from '../navigation/RootNavigator';
 import { getRecipeInformation } from '../api/recipes';
 import { RecipeDetail } from '../types/api';
 import { addToPlanning, isFavorite, toggleFavorite } from '../database/db';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function RecipeDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'RecipeDetail'>>();
@@ -24,6 +25,7 @@ export default function RecipeDetailScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [mealSlot, setMealSlot] = useState<'lunch' | 'dinner'>('lunch');
+  const { isFr } = useLanguage();
 
   useEffect(() => {
     Promise.all([
@@ -75,7 +77,7 @@ export default function RecipeDetailScreen() {
       </View>
       
       <View style={styles.content}>
-        <Text style={styles.title}>{recipe.title}</Text>
+        <Text style={styles.title}>{isFr && recipe.title_fr ? recipe.title_fr : recipe.title}</Text>
         <Text style={styles.subtitle}>⏱️ {recipe.readyInMinutes} min  •  🍴 {recipe.servings} portions</Text>
 
         {/* Grille Nutritionnelle */}
@@ -91,7 +93,8 @@ export default function RecipeDetailScreen() {
         {/* Instructions */}
         <Text style={styles.sectionTitle}>Instructions</Text>
         <Text style={styles.instructions}>
-          {(recipe.instructions ?? "Aucune instruction disponible.")
+          {((isFr && recipe.instructions_fr ? recipe.instructions_fr : recipe.instructions)
+            ?? "Aucune instruction disponible.")
             .replace(/<[^>]*>?/gm, '')}
         </Text>
 

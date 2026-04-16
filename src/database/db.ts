@@ -57,9 +57,9 @@ export const initDatabase = async () => {
     `);
 
     // Migrations
-    try {
-      await db.execAsync('ALTER TABLE recipes_cache ADD COLUMN ingredients TEXT;');
-    } catch (_) {}
+    try { await db.execAsync('ALTER TABLE recipes_cache ADD COLUMN ingredients TEXT;'); } catch (_) {}
+    try { await db.execAsync('ALTER TABLE recipes_cache ADD COLUMN title_fr TEXT;'); } catch (_) {}
+    try { await db.execAsync('ALTER TABLE recipes_cache ADD COLUMN instructions_fr TEXT;'); } catch (_) {}
     try {
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS app_settings (

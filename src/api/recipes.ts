@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { db } from '../database/db';
 import { RecipeDetail, SearchResult } from '../types/api';
 import { RecipeCacheRow } from '../types/database';
+import { translateText, translateBatch } from '../utils/translate';
 
 const API_KEY = Constants.expoConfig?.extra?.spoonacularApiKey;
 const BASE_URL = 'https://api.spoonacular.com/recipes';
@@ -27,8 +28,11 @@ export const searchRecipesByIngredients = async (ingredients: string[]): Promise
 
     if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
     
-    const data = await response.json();
-    return data;
+    const data: SearchResult[] = await response.json();
+
+    // Traduction des titres en français
+    const titles = await translateBatch(data.map((r) => r.title));
+    return data.map((r, i) => ({ ...r, title_fr: titles[i] }));
   } catch (error) {
     console.error("❌ Erreur searchRecipesByIngredients:", error);
     return [];
@@ -52,7 +56,9 @@ export const getRecipeInformation = async (id: number): Promise<RecipeDetail | n
         return {
           ...cached,
           image: cached.image_url,
+          title_fr: cached.title_fr ?? undefined,
           instructions: JSON.parse(cached.instructions),
+          instructions_fr: cached.instructions_fr ?? undefined,
           nutrition: JSON.parse(cached.nutrition),
         } as unknown as RecipeDetail;
       }
@@ -80,16 +86,27 @@ export const getRecipeInformation = async (id: number): Promise<RecipeDetail | n
 
     data.instructions = finalInstructions;
 
-    // 4. Sauvegarde en cache
+    // 4. Traduction FR
+    const [title_fr, instructions_fr] = await Promise.all([
+      translateText(data.title),
+      translateText(data.instructions),
+    ]);
+    data.title_fr = title_fr;
+    data.instructions_fr = instructions_fr;
+
+    // 5. Sauvegarde en cache
     await db.runAsync(
-      `INSERT OR REPLACE INTO recipes_cache (id, title, image_url, servings, instructions, nutrition, ingredients, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      `INSERT OR REPLACE INTO recipes_cache
+         (id, title, title_fr, image_url, servings, instructions, instructions_fr, nutrition, ingredients, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       [
         id,
         data.title,
+        title_fr,
         data.image,
         data.servings,
         JSON.stringify(data.instructions),
+        instructions_fr,
         JSON.stringify(data.nutrition),
         JSON.stringify(data.extendedIngredients ?? []),
       ]

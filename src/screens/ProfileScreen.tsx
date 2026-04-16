@@ -6,8 +6,9 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { getUserProfile, saveUserProfile } from '../database/db';
-import { calculateGoals, calculateTDEE } from '../utils/tdee';
+import { calculateGoals } from '../utils/tdee';
 import { UserProfileRow } from '../types/database';
+import { useLanguage } from '../context/LanguageContext';
 
 type Goal = 'loss' | 'maintain' | 'gain';
 type Sex = 'male' | 'female';
@@ -25,6 +26,7 @@ export default function ProfileScreen() {
   const [height, setHeight] = useState('175');
   const [goal, setGoal] = useState<Goal>('maintain');
   const [saved, setSaved] = useState(false);
+  const { language, setLanguage } = useLanguage();
 
   useFocusEffect(
     useCallback(() => {
@@ -170,6 +172,27 @@ export default function ProfileScreen() {
       <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
         <Text style={styles.saveBtnText}>{saved ? 'Mettre à jour' : 'Enregistrer'}</Text>
       </TouchableOpacity>
+
+      {/* LANGUE */}
+      <Text style={styles.label}>Langue des recettes</Text>
+      <View style={styles.toggleRow}>
+        {(['fr', 'en'] as const).map((lang) => (
+          <TouchableOpacity
+            key={lang}
+            style={[styles.toggleBtn, language === lang && styles.toggleActive]}
+            onPress={() => setLanguage(lang)}
+          >
+            <Text style={[styles.toggleText, language === lang && styles.toggleTextActive]}>
+              {lang === 'fr' ? '🇫🇷  Français' : '🇬🇧  English'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={styles.langHint}>
+        {language === 'fr'
+          ? 'Les titres et instructions sont traduits automatiquement.'
+          : 'Recipes are displayed in their original language.'}
+      </Text>
     </ScrollView>
   );
 }
@@ -204,6 +227,7 @@ const styles = StyleSheet.create({
   previewValue: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
   previewLabel: { color: '#FFF', opacity: 0.6, fontSize: 11, marginTop: 2 },
 
-  saveBtn: { backgroundColor: '#00B894', padding: 16, borderRadius: 14, alignItems: 'center', marginTop: 24, marginBottom: 40 },
+  saveBtn: { backgroundColor: '#00B894', padding: 16, borderRadius: 14, alignItems: 'center', marginTop: 24, marginBottom: 8 },
   saveBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  langHint: { fontSize: 12, color: '#B2BEC3', marginTop: 8, marginBottom: 40 },
 });

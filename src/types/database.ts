@@ -1,11 +1,13 @@
 export interface RecipeCacheRow {
   id: number;
   title: string;
+  title_fr: string | null;
   image_url: string | null;
   servings: number;
-  instructions: string; // JSON sérialisé
-  nutrition: string;    // JSON sérialisé
-  ingredients: string;  // JSON sérialisé (extendedIngredients)
+  instructions: string;  // JSON sérialisé
+  instructions_fr: string | null;
+  nutrition: string;     // JSON sérialisé
+  ingredients: string;   // JSON sérialisé (extendedIngredients)
   updated_at: string;
 }
 
