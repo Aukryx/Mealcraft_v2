@@ -1,6 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { normalizeNutrientValue } from '../utils/nutrition';
 import { PlanningRow } from '../types/database';
+import { RecipeDetail } from '../types/api';
 
 // Ouverture de la base de données
 export const db = SQLite.openDatabaseSync('mealcraft.db');
@@ -45,7 +46,6 @@ export const initDatabase = async () => {
       );
     `);
 
-    console.log("✅ Base de données initialisée (Tables prêtes)");
   } catch (error) {
     console.error("❌ Erreur SQL lors de l'initialisation :", error);
   }
@@ -53,7 +53,7 @@ export const initDatabase = async () => {
 
 // --- FONCTIONS PLANNING (ISSUE #6) ---
 
-export const addToPlanning = async (recipe: any, date: string, mealSlot: 'lunch' | 'dinner', servings: number) => {
+export const addToPlanning = async (recipe: RecipeDetail, date: string, mealSlot: 'lunch' | 'dinner', servings: number) => {
   try {
     const calories = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Calories')?.amount);
     const protein = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Protein')?.amount);

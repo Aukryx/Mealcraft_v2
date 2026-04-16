@@ -49,7 +49,6 @@ export const getRecipeInformation = async (id: number): Promise<RecipeDetail | n
     if (cached) {
       const isExpired = new Date().getTime() - new Date(cached.updated_at).getTime() > 24 * 60 * 60 * 1000;
       if (!isExpired) {
-        console.log(`📦 [Cache Hit] Recette ${id}`);
         return {
           ...cached,
           image: cached.image_url,
@@ -60,7 +59,6 @@ export const getRecipeInformation = async (id: number): Promise<RecipeDetail | n
     }
 
     // 2. Appel API si nécessaire
-    console.log(`🌐 [API Call] Recette ${id}`);
     const response = await fetch(`${BASE_URL}/${id}/information?includeNutrition=true&apiKey=${API_KEY}`);
     
     if (response.status === 402) {

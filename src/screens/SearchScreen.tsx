@@ -12,13 +12,15 @@ import {
 import { searchRecipesByIngredients } from '../api/recipes';
 import { SearchResult } from '../types/api';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/RootNavigator';
 
 export default function SearchScreen() {
   const [ingredient, setIngredient] = useState('');
   const [ingredientsList, setIngredientsList] = useState<string[]>([]);
   const [recipes, setRecipes] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const addIngredient = () => {
     if (ingredient.trim()) {
@@ -32,10 +34,8 @@ export default function SearchScreen() {
   };
 
   const handleSearch = async () => {
-    console.log("🔍 Bouton cliqué ! Recherche pour :", ingredientsList);
     setLoading(true);
     const results = await searchRecipesByIngredients(ingredientsList);
-    console.log("✅ Résultats trouvés :", results.length);
     setRecipes(results);
     setLoading(false);
   };

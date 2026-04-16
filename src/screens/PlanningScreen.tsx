@@ -1,9 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { getPlanningForDate, removeFromPlanning } from '../database/db';
+import { PlanningRow } from '../types/database';
 
 export default function PlanningScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -24,9 +25,9 @@ export default function PlanningScreen() {
     return days;
   };
 
-  const weekDays = getWeekDays();
+  const weekDays = useMemo(() => getWeekDays(), []);
   const [selectedDate, setSelectedDate] = useState(weekDays[0].fullDate);
-  const [meals, setMeals] = useState<any[]>([]);
+  const [meals, setMeals] = useState<PlanningRow[]>([]);
 
   // 2. Chargement des données depuis SQLite
   const loadData = async () => {
@@ -103,7 +104,7 @@ export default function PlanningScreen() {
       {/* LISTE DES REPAS PLANIFIÉS */}
       <FlatList
         data={meals}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id!.toString()}
         renderItem={({ item }) => (
           <View style={styles.mealCard}>
             {/* Zone cliquable : Navigation vers le détail */}
@@ -124,7 +125,7 @@ export default function PlanningScreen() {
             {/* Zone d'action : Suppression */}
             <TouchableOpacity 
               style={styles.deleteBtn} 
-              onPress={() => handleDelete(item.id)}
+              onPress={() => handleDelete(item.id!)}
             >
               <Text style={{ fontSize: 20 }}>🗑️</Text>
             </TouchableOpacity>
