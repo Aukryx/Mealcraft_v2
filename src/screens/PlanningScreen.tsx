@@ -3,8 +3,9 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
-import { getPlanningForDate, removeFromPlanning } from '../database/db';
+import { getPlanningForDate, removeFromPlanning, getUserProfile } from '../database/db';
 import { PlanningRow } from '../types/database';
+import { calculateGoals, NutritionGoals } from '../utils/tdee';
 
 export default function PlanningScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -28,11 +29,16 @@ export default function PlanningScreen() {
   const weekDays = useMemo(() => getWeekDays(), []);
   const [selectedDate, setSelectedDate] = useState(weekDays[0].fullDate);
   const [meals, setMeals] = useState<PlanningRow[]>([]);
+  const [goals, setGoals] = useState<NutritionGoals | null>(null);
 
   // 2. Chargement des données depuis SQLite
   const loadData = async () => {
-    const data = await getPlanningForDate(selectedDate);
+    const [data, profile] = await Promise.all([
+      getPlanningForDate(selectedDate),
+      getUserProfile(),
+    ]);
     setMeals(data);
+    setGoals(profile ? calculateGoals(profile) : null);
   };
 
   useFocusEffect(
@@ -81,24 +87,50 @@ export default function PlanningScreen() {
 
       {/* RÉSUMÉ NUTRITIONNEL DU JOUR */}
       <View style={styles.summaryCard}>
-        <View>
-          <Text style={styles.summaryTitle}>TOTAL DU JOUR</Text>
-          <Text style={styles.totalCal}>{Math.round(totals.cal)} kcal</Text>
+        <View style={styles.calRow}>
+          <View>
+            <Text style={styles.summaryTitle}>TOTAL DU JOUR</Text>
+            <Text style={styles.totalCal}>{Math.round(totals.cal)} kcal</Text>
+          </View>
+          {goals && (
+            <Text style={styles.calGoal}>/ {goals.calories} kcal</Text>
+          )}
         </View>
+
+        {goals && (
+          <View style={styles.progressBarTrack}>
+            <View style={[
+              styles.progressBarFill,
+              { width: `${Math.min((totals.cal / goals.calories) * 100, 100)}%` as any,
+                backgroundColor: totals.cal > goals.calories ? '#FF7675' : '#55EFC4' }
+            ]} />
+          </View>
+        )}
+
         <View style={styles.macroGrid}>
-          <View style={styles.macroItem}>
-            <Text style={styles.macroVal}>{Math.round(totals.prot)}g</Text>
-            <Text style={styles.macroLab}>Prot.</Text>
-          </View>
-          <View style={styles.macroItem}>
-            <Text style={styles.macroVal}>{Math.round(totals.carbs)}g</Text>
-            <Text style={styles.macroLab}>Gluc.</Text>
-          </View>
-          <View style={styles.macroItem}>
-            <Text style={styles.macroVal}>{Math.round(totals.fat)}g</Text>
-            <Text style={styles.macroLab}>Lip.</Text>
-          </View>
+          {[
+            { label: 'Prot.', val: totals.prot, goal: goals?.protein_g, color: '#74B9FF' },
+            { label: 'Gluc.', val: totals.carbs, goal: goals?.carbs_g, color: '#FFEAA7' },
+            { label: 'Lip.', val: totals.fat, goal: goals?.fat_g, color: '#FD79A8' },
+          ].map(({ label, val, goal: macroGoal, color }) => (
+            <View key={label} style={styles.macroItem}>
+              <Text style={styles.macroVal}>{Math.round(val)}g</Text>
+              {macroGoal && <Text style={styles.macroGoal}>/ {macroGoal}g</Text>}
+              <View style={styles.miniBarTrack}>
+                <View style={[
+                  styles.miniBarFill,
+                  { width: `${Math.min((val / (macroGoal ?? 1)) * 100, 100)}%` as any,
+                    backgroundColor: color }
+                ]} />
+              </View>
+              <Text style={styles.macroLab}>{label}</Text>
+            </View>
+          ))}
         </View>
+
+        {!goals && (
+          <Text style={styles.noProfileHint}>Configure ton profil pour voir tes objectifs</Text>
+        )}
       </View>
 
       {/* LISTE DES REPAS PLANIFIÉS */}
@@ -168,22 +200,27 @@ const styles = StyleSheet.create({
   textWhite: { color: '#FFF' },
 
   // Résumé
-  summaryCard: { 
-    backgroundColor: '#00B894', 
-    padding: 20, 
-    borderRadius: 20, 
+  summaryCard: {
+    backgroundColor: '#2D3436',
+    padding: 20,
+    borderRadius: 20,
     marginBottom: 25,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     elevation: 4
   },
-  summaryTitle: { color: '#FFF', opacity: 0.8, fontSize: 12, fontWeight: 'bold' },
+  calRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 10 },
+  summaryTitle: { color: '#FFF', opacity: 0.6, fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 },
   totalCal: { color: '#FFF', fontSize: 28, fontWeight: 'bold' },
-  macroGrid: { flexDirection: 'row', gap: 12 },
-  macroItem: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', padding: 8, borderRadius: 10, minWidth: 45 },
-  macroVal: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
-  macroLab: { color: '#FFF', fontSize: 9, opacity: 0.9 },
+  calGoal: { color: '#FFF', opacity: 0.5, fontSize: 13, marginBottom: 4 },
+  progressBarTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 3, marginBottom: 18 },
+  progressBarFill: { height: 6, borderRadius: 3 },
+  macroGrid: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  macroItem: { flex: 1, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.07)', padding: 10, borderRadius: 12 },
+  macroVal: { color: '#FFF', fontWeight: 'bold', fontSize: 15 },
+  macroGoal: { color: '#FFF', opacity: 0.45, fontSize: 10, marginBottom: 6 },
+  miniBarTrack: { width: '100%', height: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, marginBottom: 6 },
+  miniBarFill: { height: 4, borderRadius: 2 },
+  macroLab: { color: '#FFF', fontSize: 10, opacity: 0.7 },
+  noProfileHint: { color: '#FFF', opacity: 0.5, fontSize: 12, textAlign: 'center', marginTop: 12 },
 
   // Cartes repas
   mealCard: { 
