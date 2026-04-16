@@ -15,6 +15,9 @@ export interface RecipeDetail {
   instructions: string;
   summary: string;
   extendedIngredients: {
+    name: string;
+    amount: number;
+    unit: string;
     original: string;
   }[];
   nutrition?: {
