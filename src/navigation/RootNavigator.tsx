@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SearchScreen from '../screens/SearchScreen';
@@ -15,7 +16,6 @@ export type RootStackParamList = {
 export type TabParamList = {
   SearchTab: undefined;
   PlanningTab: undefined;
-  FavoritesTab: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -58,6 +58,3 @@ export default function RootNavigator() {
     </Stack.Navigator>
   );
 }
-
-// Petit hack rapide pour les icônes si tu n'as pas installé Vector Icons :
-import { Text } from 'react-native';
