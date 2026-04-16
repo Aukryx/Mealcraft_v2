@@ -6,6 +6,7 @@ import SearchScreen from '../screens/SearchScreen';
 import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 import PlanningScreen from '../screens/PlanningScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
 // 1. Définition des types pour la navigation
 export type RootStackParamList = {
@@ -16,6 +17,8 @@ export type RootStackParamList = {
 export type TabParamList = {
   SearchTab: undefined;
   PlanningTab: undefined;
+  FavoritesTab: undefined;
+  ProfileTab: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -38,10 +41,15 @@ function TabNavigator() {
         component={PlanningScreen} 
         options={{ title: 'Planning', tabBarIcon: () => <Text>📅</Text> }} 
       />
-      <Tab.Screen 
-        name="FavoritesTab" 
-        component={FavoritesScreen} 
-        options={{ title: 'Favoris', tabBarIcon: () => <Text>❤️</Text> }} 
+      <Tab.Screen
+        name="FavoritesTab"
+        component={FavoritesScreen}
+        options={{ title: 'Favoris', tabBarIcon: () => <Text>❤️</Text> }}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileScreen}
+        options={{ title: 'Profil', tabBarIcon: () => <Text>👤</Text> }}
       />
     </Tab.Navigator>
   );

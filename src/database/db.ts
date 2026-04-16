@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { normalizeNutrientValue } from '../utils/nutrition';
-import { PlanningRow } from '../types/database';
+import { PlanningRow, UserProfileRow } from '../types/database';
 import { RecipeDetail } from '../types/api';
 
 // Ouverture de la base de données
@@ -43,6 +43,16 @@ export const initDatabase = async () => {
         recipe_id INTEGER PRIMARY KEY NOT NULL,
         added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (recipe_id) REFERENCES recipes_cache (id) ON DELETE CASCADE
+      );
+
+      -- Table Profil utilisateur (une seule ligne, id = 1)
+      CREATE TABLE IF NOT EXISTS user_profile (
+        id INTEGER PRIMARY KEY NOT NULL DEFAULT 1,
+        sex TEXT NOT NULL DEFAULT 'male',
+        age INTEGER NOT NULL DEFAULT 25,
+        weight_kg REAL NOT NULL DEFAULT 70,
+        height_cm REAL NOT NULL DEFAULT 175,
+        goal TEXT NOT NULL DEFAULT 'maintain'
       );
     `);
 
@@ -87,6 +97,31 @@ export const removeFromPlanning = async (id: number) => {
     return true;
   } catch (error) {
     console.error("❌ Erreur removeFromPlanning :", error);
+    return false;
+  }
+};
+
+// --- FONCTIONS PROFIL ---
+
+export const getUserProfile = async (): Promise<UserProfileRow | null> => {
+  try {
+    return await db.getFirstAsync<UserProfileRow>('SELECT * FROM user_profile WHERE id = 1');
+  } catch (error) {
+    console.error("❌ Erreur getUserProfile :", error);
+    return null;
+  }
+};
+
+export const saveUserProfile = async (profile: Omit<UserProfileRow, 'id'>): Promise<boolean> => {
+  try {
+    await db.runAsync(
+      `INSERT OR REPLACE INTO user_profile (id, sex, age, weight_kg, height_cm, goal)
+       VALUES (1, ?, ?, ?, ?, ?)`,
+      [profile.sex, profile.age, profile.weight_kg, profile.height_cm, profile.goal]
+    );
+    return true;
+  } catch (error) {
+    console.error("❌ Erreur saveUserProfile :", error);
     return false;
   }
 };

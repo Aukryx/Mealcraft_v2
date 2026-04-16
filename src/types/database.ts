@@ -25,3 +25,12 @@ export interface FavoriteRow {
   recipe_id: number;
   added_at: string;
 }
+
+export interface UserProfileRow {
+  id: number;
+  sex: 'male' | 'female';
+  age: number;
+  weight_kg: number;
+  height_cm: number;
+  goal: 'loss' | 'maintain' | 'gain';
+}
