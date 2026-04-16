@@ -58,7 +58,8 @@ export default function ProfileScreen() {
     const ok = await saveUserProfile(profile);
     if (ok) {
       setSaved(true);
-      Alert.alert('✅ Profil sauvegardé !', `Objectif calorique : ${calculateTDEE(profile as UserProfileRow)} kcal/jour`);
+      const goals = calculateGoals(profile as UserProfileRow);
+      Alert.alert('✅ Profil sauvegardé !', `Objectif calorique : ${goals.calories} kcal/jour`);
     }
   };
 
