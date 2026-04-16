@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { searchRecipesByIngredients } from '../api/recipes';
 import { SearchResult } from '../types/api';
+import { translateIngredients } from '../utils/ingredients';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
@@ -35,7 +36,8 @@ export default function SearchScreen() {
 
   const handleSearch = async () => {
     setLoading(true);
-    const results = await searchRecipesByIngredients(ingredientsList);
+    const translated = translateIngredients(ingredientsList);
+    const results = await searchRecipesByIngredients(translated);
     setRecipes(results);
     setLoading(false);
   };

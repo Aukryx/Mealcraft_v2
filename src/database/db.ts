@@ -56,12 +56,18 @@ export const initDatabase = async () => {
       );
     `);
 
-    // Migration : ajout de la colonne ingredients si elle n'existe pas encore
+    // Migrations
     try {
       await db.execAsync('ALTER TABLE recipes_cache ADD COLUMN ingredients TEXT;');
-    } catch (_) {
-      // Colonne déjà présente, on ignore
-    }
+    } catch (_) {}
+    try {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS app_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        );
+      `);
+    } catch (_) {}
 
   } catch (error) {
     console.error("❌ Erreur SQL lors de l'initialisation :", error);
@@ -214,6 +220,29 @@ export const getShoppingList = async (startDate: string, endDate: string): Promi
   } catch (error) {
     console.error("❌ Erreur getShoppingList :", error);
     return [];
+  }
+};
+
+// --- ONBOARDING ---
+
+export const isOnboardingDone = async (): Promise<boolean> => {
+  try {
+    const row = await db.getFirstAsync<{ value: string }>(
+      "SELECT value FROM app_settings WHERE key = 'onboarding_done'"
+    );
+    return row?.value === 'true';
+  } catch {
+    return false;
+  }
+};
+
+export const setOnboardingDone = async (): Promise<void> => {
+  try {
+    await db.runAsync(
+      "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('onboarding_done', 'true')"
+    );
+  } catch (error) {
+    console.error("❌ Erreur setOnboardingDone :", error);
   }
 };
 
