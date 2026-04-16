@@ -7,31 +7,40 @@ const API_KEY = Constants.expoConfig?.extra?.spoonacularApiKey;
 const BASE_URL = 'https://api.spoonacular.com/recipes';
 
 /**
- * Recherche des recettes par liste d'ingrédients
+ * Recherche des recettes par ingrédients
  */
 export const searchRecipesByIngredients = async (ingredients: string[]): Promise<SearchResult[]> => {
   if (ingredients.length === 0) return [];
   
+  // Utilisation de l'anglais recommandée pour maximiser les résultats avec 50 pts/jour
   const ingredientsQuery = ingredients.join(',');
   const url = `${BASE_URL}/findByIngredients?ingredients=${ingredientsQuery}&number=10&apiKey=${API_KEY}`;
 
   try {
     const response = await fetch(url);
-    if (!response.ok) throw new Error('Erreur réseau');
+    
+    // Gestion du quota (Erreur 402)
+    if (response.status === 402) {
+      console.error("❌ Quota Spoonacular épuisé pour aujourd'hui !");
+      return [];
+    }
+
+    if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
+    
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Erreur API Search:", error);
+    console.error("❌ Erreur searchRecipesByIngredients:", error);
     return [];
   }
 };
 
 /**
- * Récupère les détails d'une recette avec stratégie de cache SQLite (TTL 24h)
+ * Détails d'une recette avec Cache SQLite (TTL 24h) et Fallback Instructions
  */
 export const getRecipeInformation = async (id: number): Promise<RecipeDetail | null> => {
   try {
-    // 1. Vérification du cache local
+    // 1. Vérification du cache pour économiser les points
     const cached = await db.getFirstAsync<RecipeCacheRow>(
       'SELECT * FROM recipes_cache WHERE id = ?',
       [id]
@@ -50,23 +59,28 @@ export const getRecipeInformation = async (id: number): Promise<RecipeDetail | n
       }
     }
 
-    // 2. Appel API si non trouvé ou expiré
+    // 2. Appel API si nécessaire
     console.log(`🌐 [API Call] Recette ${id}`);
     const response = await fetch(`${BASE_URL}/${id}/information?includeNutrition=true&apiKey=${API_KEY}`);
+    
+    if (response.status === 402) {
+      console.error("❌ Quota épuisé lors de la récupération des détails");
+      return null;
+    }
+
     const data: RecipeDetail = await response.json();
 
-    // 3. Logique de Fallback pour les instructions vides
-    // Si 'instructions' est vide ou nul, on utilise 'summary'. Si summary est vide, message par défaut.
+    // 3. Logique de Fallback pour les instructions
+    // On utilise le résumé (summary) si les instructions sont vides
     const finalInstructions = (data.instructions && data.instructions.trim() !== "") 
       ? data.instructions 
       : (data.summary && data.summary.trim() !== "" 
           ? data.summary 
-          : "Aucune instruction détaillée n'est fournie pour cette recette.");
+          : "Aucune instruction détaillée n'est disponible.");
 
-    // On met à jour l'objet data avant la mise en cache
     data.instructions = finalInstructions;
 
-    // 4. Mise en cache de la donnée propre
+    // 4. Sauvegarde en cache
     await db.runAsync(
       `INSERT OR REPLACE INTO recipes_cache (id, title, image_url, servings, instructions, nutrition, updated_at) 
        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
@@ -82,7 +96,7 @@ export const getRecipeInformation = async (id: number): Promise<RecipeDetail | n
 
     return data;
   } catch (error) {
-    console.error("Erreur getRecipeInformation:", error);
+    console.error("❌ Erreur getRecipeInformation:", error);
     return null;
   }
 };

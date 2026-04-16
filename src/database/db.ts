@@ -1,17 +1,16 @@
 import * as SQLite from 'expo-sqlite';
-import { PlanningRow } from '../types/database';
 import { normalizeNutrientValue } from '../utils/nutrition';
 
-// Ouverture de la base de données (MealCraft.db)
+// Ouverture de la base de données
 export const db = SQLite.openDatabaseSync('mealcraft.db');
 
 export const initDatabase = async () => {
   try {
-    // Activation des clés étrangères pour les relations entre tables
+    // Activation des clés étrangères
     await db.execAsync('PRAGMA foreign_keys = ON;');
 
     await db.execAsync(`
-      -- Table Cache Recettes
+      -- Table Cache Recettes (Détails complets)
       CREATE TABLE IF NOT EXISTS recipes_cache (
         id INTEGER PRIMARY KEY NOT NULL,
         title TEXT NOT NULL,
@@ -22,7 +21,7 @@ export const initDatabase = async () => {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
-      -- Table Planning
+      -- Table Planning (Issue #6)
       CREATE TABLE IF NOT EXISTS planning (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT NOT NULL,
@@ -37,7 +36,7 @@ export const initDatabase = async () => {
         FOREIGN KEY (recipe_id) REFERENCES recipes_cache (id) ON DELETE CASCADE
       );
 
-      -- Table Favoris
+      -- Table Favoris (Issue #7)
       CREATE TABLE IF NOT EXISTS favorites (
         recipe_id INTEGER PRIMARY KEY NOT NULL,
         added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -51,9 +50,10 @@ export const initDatabase = async () => {
   }
 };
 
+// --- FONCTIONS PLANNING (ISSUE #6) ---
+
 export const addToPlanning = async (recipe: any, date: string, mealSlot: 'lunch' | 'dinner', servings: number) => {
   try {
-    // On extrait les nutriments principaux via notre utilitaire de normalisation
     const calories = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Calories')?.amount);
     const protein = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Protein')?.amount);
     const fat = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Fat')?.amount);
@@ -64,23 +64,70 @@ export const addToPlanning = async (recipe: any, date: string, mealSlot: 'lunch'
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [date, mealSlot, recipe.id, recipe.title, servings, calories, protein, fat, carbs]
     );
-    console.log("📅 Ajouté au planning avec succès !");
     return true;
   } catch (error) {
-    console.error("❌ Erreur lors de l'ajout au planning :", error);
+    console.error("❌ Erreur addToPlanning :", error);
     return false;
   }
 };
 
-// Récupérer le planning pour une date donnée
-export const getPlanningForDate = async (date: string): Promise<PlanningRow[]> => {
-  return await db.getAllAsync<PlanningRow>(
-    'SELECT * FROM planning WHERE date = ? ORDER BY meal_slot DESC',
-    [date]
-  );
+export const getPlanningForDate = async (date: string) => {
+  try {
+    return await db.getAllAsync<any>('SELECT * FROM planning WHERE date = ?', [date]);
+  } catch (error) {
+    console.error("❌ Erreur getPlanningForDate :", error);
+    return [];
+  }
 };
 
-// Supprimer un repas du planning
 export const removeFromPlanning = async (id: number) => {
-  await db.runAsync('DELETE FROM planning WHERE id = ?', [id]);
+  try {
+    await db.runAsync('DELETE FROM planning WHERE id = ?', [id]);
+    return true;
+  } catch (error) {
+    console.error("❌ Erreur removeFromPlanning :", error);
+    return false;
+  }
+};
+
+// --- FONCTIONS FAVORIS (ISSUE #7) ---
+
+export const isFavorite = async (recipeId: number): Promise<boolean> => {
+  try {
+    const row = await db.getFirstAsync<{recipe_id: number}>('SELECT recipe_id FROM favorites WHERE recipe_id = ?', [recipeId]);
+    return !!row;
+  } catch (error) {
+    return false;
+  }
+};
+
+export const toggleFavorite = async (recipeId: number) => {
+  try {
+    const exists = await isFavorite(recipeId);
+    if (exists) {
+      await db.runAsync('DELETE FROM favorites WHERE recipe_id = ?', [recipeId]);
+      return false;
+    } else {
+      await db.runAsync('INSERT INTO favorites (recipe_id) VALUES (?)', [recipeId]);
+      return true;
+    }
+  } catch (error) {
+    console.error("❌ Erreur toggleFavorite :", error);
+    return false;
+  }
+};
+
+export const getAllFavorites = async () => {
+  try {
+    // Jointure avec recipes_cache pour avoir les infos (titre, image) dans la liste des favoris
+    return await db.getAllAsync<any>(`
+      SELECT f.recipe_id, r.title, r.image_url 
+      FROM favorites f
+      JOIN recipes_cache r ON f.recipe_id = r.id
+      ORDER BY f.added_at DESC
+    `);
+  } catch (error) {
+    console.error("❌ Erreur getAllFavorites :", error);
+    return [];
+  }
 };
