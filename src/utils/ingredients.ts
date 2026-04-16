@@ -21,7 +21,7 @@ const FR_TO_EN: Record<string, string> = {
   // Légumes
   tomate: 'tomato', tomates: 'tomato', oignon: 'onion', oignons: 'onion',
   ail: 'garlic', carotte: 'carrot', carottes: 'carrot',
-  'pomme de terre': 'potato', pommes de terre: 'potato', patate: 'potato',
+  'pomme de terre': 'potato', 'pommes de terre': 'potato', patate: 'potato',
   courgette: 'zucchini', courgettes: 'zucchini',
   aubergine: 'eggplant', aubergines: 'eggplant',
   poivron: 'bell pepper', poivrons: 'bell pepper',
@@ -31,7 +31,7 @@ const FR_TO_EN: Record<string, string> = {
   salade: 'lettuce', laitue: 'lettuce', concombre: 'cucumber',
   céleri: 'celery', celeri: 'celery', poireau: 'leek', poireaux: 'leek',
   navet: 'turnip', radis: 'radish', betterave: 'beet',
-  'haricot vert': 'green bean', haricots verts: 'green bean',
+  'haricot vert': 'green bean', 'haricots verts': 'green bean',
   'petits pois': 'peas', maïs: 'corn', mais: 'corn',
   asperge: 'asparagus', asperges: 'asparagus',
   artichaut: 'artichoke', fenouil: 'fennel',
@@ -62,7 +62,7 @@ const FR_TO_EN: Record<string, string> = {
   œuf: 'egg', oeuf: 'egg', œufs: 'eggs', oeufs: 'eggs',
   gruyère: 'gruyere', gruyere: 'gruyere', parmesan: 'parmesan',
   mozzarella: 'mozzarella', ricotta: 'ricotta', feta: 'feta',
-  'crème fraîche': 'sour cream', creme fraiche: 'sour cream',
+  'crème fraîche': 'sour cream', 'creme fraiche': 'sour cream',
   emmental: 'emmental', camembert: 'camembert', roquefort: 'roquefort',
   mascarpone: 'mascarpone', comté: 'comte', comte: 'comte',
 
@@ -78,7 +78,7 @@ const FR_TO_EN: Record<string, string> = {
   lentilles: 'lentils', lentille: 'lentils',
   'pois chiches': 'chickpeas', haricots: 'beans',
   'haricots rouges': 'kidney beans', 'haricots blancs': 'white beans',
-  flageolets: 'flageolet beans', pois cassés: 'split peas',
+  flageolets: 'flageolet beans', 'pois cassés': 'split peas',
 
   // Épices & herbes
   sel: 'salt', poivre: 'pepper', sucre: 'sugar', miel: 'honey',
@@ -90,7 +90,7 @@ const FR_TO_EN: Record<string, string> = {
   piment: 'chili', piments: 'chili', curry: 'curry',
   'herbes de provence': 'herbes de provence', aneth: 'dill',
   menthe: 'mint', estragon: 'tarragon', sarriette: 'savory',
-  marjolaine: 'marjoram', cardamome: 'cardamom', clou de girofle: 'clove',
+  marjolaine: 'marjoram', cardamome: 'cardamom', 'clou de girofle': 'clove',
   anis: 'anise', fenouil: 'fennel seeds',
 
   // Condiments & autres
@@ -99,7 +99,7 @@ const FR_TO_EN: Record<string, string> = {
   mayonnaise: 'mayonnaise', ketchup: 'ketchup',
   soja: 'soy sauce', bouillon: 'broth', vin: 'wine',
   'vin blanc': 'white wine', 'vin rouge': 'red wine', bière: 'beer', biere: 'beer',
-  noix: 'walnut', noix de cajou: 'cashew', amande: 'almond', amandes: 'almond',
+  noix: 'walnut', 'noix de cajou': 'cashew', amande: 'almond', amandes: 'almond',
   noisette: 'hazelnut', noisettes: 'hazelnut', pistache: 'pistachio',
   cacahuète: 'peanut', cacahuete: 'peanut', arachide: 'peanut',
   chocolat: 'chocolate', levure: 'yeast', tofu: 'tofu',
