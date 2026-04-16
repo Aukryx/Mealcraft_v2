@@ -26,9 +26,9 @@ export default {
       favicon: "./assets/favicon.png"
     },
     plugins: [
-      "expo-sqlite"
+      "expo-sqlite",
+      "@react-native-community/datetimepicker"
     ],
-    // C'est ici que la magie opère :
     extra: {
       spoonacularApiKey: process.env.SPOONACULAR_API_KEY,
     }
