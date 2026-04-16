@@ -14,7 +14,7 @@ const FR_TO_EN: Record<string, string> = {
   calamars: 'squid', calmar: 'squid', daurade: 'sea bream',
   truite: 'trout', sardine: 'sardine', sardines: 'sardine',
   anchois: 'anchovy', homard: 'lobster', crabe: 'crab',
-  noix de saint-jacques: 'scallop', maquereau: 'mackerel',
+  'noix de saint-jacques': 'scallop', maquereau: 'mackerel',
   bar: 'sea bass', lotte: 'monkfish', hareng: 'herring',
   dorade: 'sea bream',
 
@@ -54,7 +54,7 @@ const FR_TO_EN: Record<string, string> = {
   myrtille: 'blueberry', myrtilles: 'blueberry',
   pastèque: 'watermelon', pasteque: 'watermelon', melon: 'melon',
   pamplemousse: 'grapefruit', mandarine: 'mandarin',
-  noix de coco: 'coconut', coco: 'coconut', litchi: 'lychee',
+  'noix de coco': 'coconut', coco: 'coconut', litchi: 'lychee',
 
   // Produits laitiers & œufs
   lait: 'milk', beurre: 'butter', crème: 'cream', creme: 'cream',
