@@ -1,19 +1,32 @@
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SearchScreen from '../screens/SearchScreen';
-import RecipeDetailScreen from '../screens/RecipeDetailScreen'; // On va le créer après
+import RecipeDetailScreen from '../screens/RecipeDetailScreen';
+import PlanningScreen from '../screens/PlanningScreen';
+
+const Tab = createBottomTabNavigator();
 
 export type RootStackParamList = {
-  Search: undefined;
+  SearchMain: undefined;
   RecipeDetail: { recipeId: number };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export default function RootNavigator() {
+function SearchStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerTitle: 'MealCraft' }}>
-      <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Recherche' }} />
+    <Stack.Navigator>
+      <Stack.Screen name="SearchMain" component={SearchScreen} options={{ title: 'Recherche' }} />
       <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} options={{ title: 'Détails' }} />
     </Stack.Navigator>
+  );
+}
+
+export default function RootNavigator() {
+  return (
+    <Tab.Navigator screenOptions={{ headerShown: false }}>
+      <Tab.Screen name="Recherche" component={SearchStack} />
+      <Tab.Screen name="Planning" component={PlanningScreen} options={{ headerShown: true }} />
+    </Tab.Navigator>
   );
 }

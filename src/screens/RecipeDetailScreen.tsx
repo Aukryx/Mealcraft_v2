@@ -51,30 +51,37 @@ export default function RecipeDetailScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Instructions</Text>
-        <Text style={styles.instructions}>{recipe.instructions.replace(/<[^>]*>?/gm, '')}</Text>
+        <Text style={styles.instructions}>
+          {(recipe.instructions ?? "Aucune instruction disponible.")
+            .replace(/<[^>]*>?/gm, '')}
+        </Text>
 
-        {/* C'est ici qu'on ajoutera le sélecteur de portions et le bouton Planning plus tard */}
-        <TouchableOpacity style={styles.planButton}>
-           <Text style={styles.sectionTitle}>Ma portion</Text>
-<View style={styles.servingsSelector}>
-  <TouchableOpacity onPress={() => setServings(Math.max(1, servings - 1))} style={styles.serveBtn}>
-    <Text style={styles.serveBtnText}>-</Text>
-  </TouchableOpacity>
-  <Text style={styles.servingsText}>{servings}</Text>
-  <TouchableOpacity onPress={() => setServings(servings + 1)} style={styles.serveBtn}>
-    <Text style={styles.serveBtnText}>+</Text>
-  </TouchableOpacity>
-</View>
+        {/* --- SECTION PORTIONS (SORTIE DU BOUTON) --- */}
+        <Text style={styles.sectionTitle}>Ma portion</Text>
+        <View style={styles.servingsSelector}>
+          <TouchableOpacity onPress={() => setServings(Math.max(1, servings - 1))} style={styles.serveBtn}>
+            <Text style={styles.serveBtnText}>-</Text>
+          </TouchableOpacity>
+          <Text style={styles.servingsText}>{servings}</Text>
+          <TouchableOpacity onPress={() => setServings(servings + 1)} style={styles.serveBtn}>
+            <Text style={styles.serveBtnText}>+</Text>
+          </TouchableOpacity>
+        </View>
 
-<View style={styles.actionRow}>
-  <TouchableOpacity style={[styles.planButton, {backgroundColor: '#0984E3'}]} onPress={() => handleAddToPlanning('lunch')}>
-    <Text style={styles.planButtonText}>Midi</Text>
-  </TouchableOpacity>
-  <TouchableOpacity style={[styles.planButton, {backgroundColor: '#6C5CE7'}]} onPress={() => handleAddToPlanning('dinner')}>
-    <Text style={styles.planButtonText}>Soir</Text>
-  </TouchableOpacity>
-</View>
-        </TouchableOpacity>
+        <View style={styles.actionRow}>
+          <TouchableOpacity 
+            style={[styles.planButton, {backgroundColor: '#0984E3'}]} 
+            onPress={() => handleAddToPlanning('lunch')}
+          >
+            <Text style={styles.planButtonText}>Midi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.planButton, {backgroundColor: '#6C5CE7'}]} 
+            onPress={() => handleAddToPlanning('dinner')}
+          >
+            <Text style={styles.planButtonText}>Soir</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );

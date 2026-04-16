@@ -13,6 +13,7 @@ export interface RecipeDetail {
   servings: number;
   readyInMinutes: number;
   instructions: string;
+  summary: string; // <--- Ajoute cette ligne ici
   extendedIngredients: {
     original: string;
   }[];

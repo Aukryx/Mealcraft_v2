@@ -71,3 +71,16 @@ export const addToPlanning = async (recipe: any, date: string, mealSlot: 'lunch'
     return false;
   }
 };
+
+// Récupérer le planning pour une date donnée
+export const getPlanningForDate = async (date: string): Promise<PlanningRow[]> => {
+  return await db.getAllAsync<PlanningRow>(
+    'SELECT * FROM planning WHERE date = ? ORDER BY meal_slot DESC',
+    [date]
+  );
+};
+
+// Supprimer un repas du planning
+export const removeFromPlanning = async (id: number) => {
+  await db.runAsync('DELETE FROM planning WHERE id = ?', [id]);
+};
