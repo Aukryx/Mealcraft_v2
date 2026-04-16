@@ -13,7 +13,7 @@ export const searchRecipesByIngredients = async (ingredients: string[]): Promise
   if (ingredients.length === 0) return [];
   
   // Utilisation de l'anglais recommandée pour maximiser les résultats avec 50 pts/jour
-  const ingredientsQuery = ingredients.join(',');
+  const ingredientsQuery = encodeURIComponent(ingredients.join(','));
   const url = `${BASE_URL}/findByIngredients?ingredients=${ingredientsQuery}&number=10&apiKey=${API_KEY}`;
 
   try {
@@ -67,6 +67,8 @@ export const getRecipeInformation = async (id: number): Promise<RecipeDetail | n
       console.error("❌ Quota épuisé lors de la récupération des détails");
       return null;
     }
+
+    if (!response.ok) throw new Error(`Erreur API: ${response.status}`);
 
     const data: RecipeDetail = await response.json();
 
