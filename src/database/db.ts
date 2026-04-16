@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { normalizeNutrientValue } from '../utils/nutrition';
-import { PlanningRow, UserProfileRow } from '../types/database';
+import { PlanningRow, UserProfileRow, ShoppingIngredient } from '../types/database';
 import { RecipeDetail } from '../types/api';
 
 // Ouverture de la base de données
@@ -55,6 +55,13 @@ export const initDatabase = async () => {
         goal TEXT NOT NULL DEFAULT 'maintain'
       );
     `);
+
+    // Migration : ajout de la colonne ingredients si elle n'existe pas encore
+    try {
+      await db.execAsync('ALTER TABLE recipes_cache ADD COLUMN ingredients TEXT;');
+    } catch (_) {
+      // Colonne déjà présente, on ignore
+    }
 
   } catch (error) {
     console.error("❌ Erreur SQL lors de l'initialisation :", error);
@@ -154,6 +161,59 @@ export const toggleFavorite = async (recipeId: number) => {
   } catch (error) {
     console.error("Erreur toggleFavorite", error);
     return false;
+  }
+};
+
+// --- LISTE DE COURSES ---
+
+export const getShoppingList = async (startDate: string, endDate: string): Promise<ShoppingIngredient[]> => {
+  try {
+    const rows = await db.getAllAsync<{
+      recipe_id: number;
+      recipe_title: string;
+      consumed_servings: number;
+      recipe_servings: number;
+      ingredients: string | null;
+    }>(`
+      SELECT
+        p.recipe_id,
+        p.recipe_title,
+        p.consumed_servings,
+        r.servings as recipe_servings,
+        r.ingredients
+      FROM planning p
+      JOIN recipes_cache r ON p.recipe_id = r.id
+      WHERE p.date BETWEEN ? AND ?
+    `, [startDate, endDate]);
+
+    const items: ShoppingIngredient[] = [];
+
+    for (const row of rows) {
+      if (!row.ingredients) continue;
+
+      const parsed: { name: string; amount: number; unit: string; original: string }[] =
+        JSON.parse(row.ingredients);
+
+      const ratio = row.recipe_servings > 0
+        ? row.consumed_servings / row.recipe_servings
+        : 1;
+
+      for (const ing of parsed) {
+        items.push({
+          recipeId: row.recipe_id,
+          recipeTitle: row.recipe_title,
+          name: ing.name,
+          amount: Math.round(ing.amount * ratio * 10) / 10,
+          unit: ing.unit,
+          original: ing.original,
+        });
+      }
+    }
+
+    return items;
+  } catch (error) {
+    console.error("❌ Erreur getShoppingList :", error);
+    return [];
   }
 };
 

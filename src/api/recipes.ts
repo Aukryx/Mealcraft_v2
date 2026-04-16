@@ -82,15 +82,16 @@ export const getRecipeInformation = async (id: number): Promise<RecipeDetail | n
 
     // 4. Sauvegarde en cache
     await db.runAsync(
-      `INSERT OR REPLACE INTO recipes_cache (id, title, image_url, servings, instructions, nutrition, updated_at) 
-       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      `INSERT OR REPLACE INTO recipes_cache (id, title, image_url, servings, instructions, nutrition, ingredients, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       [
-        id, 
-        data.title, 
-        data.image, 
-        data.servings, 
-        JSON.stringify(data.instructions), 
-        JSON.stringify(data.nutrition)
+        id,
+        data.title,
+        data.image,
+        data.servings,
+        JSON.stringify(data.instructions),
+        JSON.stringify(data.nutrition),
+        JSON.stringify(data.extendedIngredients ?? []),
       ]
     );
 

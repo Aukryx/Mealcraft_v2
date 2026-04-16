@@ -133,6 +133,14 @@ export default function PlanningScreen() {
         )}
       </View>
 
+      {/* BOUTON LISTE DE COURSES */}
+      <TouchableOpacity
+        style={styles.shoppingBtn}
+        onPress={() => navigation.navigate('ShoppingList')}
+      >
+        <Text style={styles.shoppingBtnText}>🛒  Liste de courses de la semaine</Text>
+      </TouchableOpacity>
+
       {/* LISTE DES REPAS PLANIFIÉS */}
       <FlatList
         data={meals}
@@ -221,6 +229,13 @@ const styles = StyleSheet.create({
   miniBarFill: { height: 4, borderRadius: 2 },
   macroLab: { color: '#FFF', fontSize: 10, opacity: 0.7 },
   noProfileHint: { color: '#FFF', opacity: 0.5, fontSize: 12, textAlign: 'center', marginTop: 12 },
+
+  shoppingBtn: {
+    backgroundColor: '#FFF', borderRadius: 14, padding: 14, marginBottom: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: '#00B894',
+  },
+  shoppingBtnText: { color: '#00B894', fontWeight: 'bold', fontSize: 15 },
 
   // Cartes repas
   mealCard: { 

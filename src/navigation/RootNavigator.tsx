@@ -7,11 +7,13 @@ import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 import PlanningScreen from '../screens/PlanningScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import ShoppingListScreen from '../screens/ShoppingListScreen';
 
 // 1. Définition des types pour la navigation
 export type RootStackParamList = {
-  MainTabs: undefined; // Le conteneur des onglets
+  MainTabs: undefined;
   RecipeDetail: { recipeId: number };
+  ShoppingList: undefined;
 };
 
 export type TabParamList = {
@@ -63,6 +65,7 @@ export default function RootNavigator() {
       <Stack.Screen name="MainTabs" component={TabNavigator} options={{ title: 'MealCraft' }} />
       {/* Les détails sont hors des onglets pour cacher le menu en bas quand on lit une recette */}
       <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} options={{ title: 'Détails' }} />
+      <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: 'Liste de courses' }} />
     </Stack.Navigator>
   );
 }

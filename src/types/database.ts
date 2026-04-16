@@ -5,7 +5,17 @@ export interface RecipeCacheRow {
   servings: number;
   instructions: string; // JSON sérialisé
   nutrition: string;    // JSON sérialisé
+  ingredients: string;  // JSON sérialisé (extendedIngredients)
   updated_at: string;
+}
+
+export interface ShoppingIngredient {
+  recipeId: number;
+  recipeTitle: string;
+  name: string;
+  amount: number;
+  unit: string;
+  original: string;
 }
 
 export interface PlanningRow {
