@@ -91,18 +91,36 @@ export default function RecipeDetailScreen() {
         {/* Instructions */}
         <Text style={styles.sectionTitle}>Instructions</Text>
         <Text style={styles.instructions}>
-          {recipe.instructions ? recipe.instructions.replace(/<[^>]*>?/gm, '') : "Préparation non détaillée."}
+          {(recipe.instructions ?? "Aucune instruction disponible.")
+            .replace(/<[^>]*>?/gm, '')}
         </Text>
 
-        <View style={styles.divider} />
+        {/* --- SECTION PORTIONS (SORTIE DU BOUTON) --- */}
+        <Text style={styles.sectionTitle}>Ma portion</Text>
+        <View style={styles.servingsSelector}>
+          <TouchableOpacity onPress={() => setServings(Math.max(1, servings - 1))} style={styles.serveBtn}>
+            <Text style={styles.serveBtnText}>-</Text>
+          </TouchableOpacity>
+          <Text style={styles.servingsText}>{servings}</Text>
+          <TouchableOpacity onPress={() => setServings(servings + 1)} style={styles.serveBtn}>
+            <Text style={styles.serveBtnText}>+</Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* Bouton pour ouvrir la planification */}
-        <TouchableOpacity 
-            style={styles.mainPlanBtn} 
-            onPress={() => setShowModal(true)}
-        >
-          <Text style={styles.mainPlanBtnText}>Ajouter au Planning 📅</Text>
-        </TouchableOpacity>
+        <View style={styles.actionRow}>
+          <TouchableOpacity 
+            style={[styles.planButton, {backgroundColor: '#0984E3'}]} 
+            onPress={() => handleAddToPlanning('lunch')}
+          >
+            <Text style={styles.planButtonText}>Midi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.planButton, {backgroundColor: '#6C5CE7'}]} 
+            onPress={() => handleAddToPlanning('dinner')}
+          >
+            <Text style={styles.planButtonText}>Soir</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* --- MODAL DE PLANIFICATION --- */}

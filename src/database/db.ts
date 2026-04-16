@@ -1,5 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { normalizeNutrientValue } from '../utils/nutrition';
+import { PlanningRow } from '../types/database';
 
 // Ouverture de la base de données
 export const db = SQLite.openDatabaseSync('mealcraft.db');
@@ -73,7 +74,7 @@ export const addToPlanning = async (recipe: any, date: string, mealSlot: 'lunch'
 
 export const getPlanningForDate = async (date: string) => {
   try {
-    return await db.getAllAsync<any>('SELECT * FROM planning WHERE date = ?', [date]);
+    return await db.getAllAsync<PlanningRow>('SELECT * FROM planning WHERE date = ?', [date]);
   } catch (error) {
     console.error("❌ Erreur getPlanningForDate :", error);
     return [];
