@@ -45,4 +45,5 @@ export interface UserProfileRow {
   weight_kg: number;
   height_cm: number;
   goal: 'loss' | 'maintain' | 'gain';
+  activity: 'sedentary' | 'light' | 'moderate' | 'active';
 }

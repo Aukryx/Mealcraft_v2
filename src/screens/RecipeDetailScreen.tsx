@@ -10,6 +10,7 @@ import { getRecipeInformation } from '../api/recipes';
 import { RecipeDetail } from '../types/api';
 import { addToPlanning, isFavorite, toggleFavorite } from '../database/db';
 import { useLanguage } from '../context/LanguageContext';
+import { toLocalDateString } from '../utils/dateUtils';
 
 export default function RecipeDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'RecipeDetail'>>();
@@ -17,11 +18,14 @@ export default function RecipeDetailScreen() {
   
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isFav, setIsFav] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
 
   // States pour le Planning & Modal
   const [servings, setServings] = useState(1);
   const [showModal, setShowModal] = useState(false);
+  const [planLoading, setPlanLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [mealSlot, setMealSlot] = useState<'lunch' | 'dinner'>('lunch');
@@ -35,23 +39,25 @@ export default function RecipeDetailScreen() {
       setRecipe(recipeData);
       setIsFav(favStatus);
       setLoading(false);
-    }).catch(err => {
-      console.error(err);
+    }).catch(() => {
       setLoading(false);
     });
   }, [recipeId]);
 
   const handleToggleFavorite = async () => {
+    if (favLoading) return;
+    setFavLoading(true);
     const newState = await toggleFavorite(recipeId);
     setIsFav(newState);
+    setFavLoading(false);
   };
 
   const confirmAddToPlanning = async () => {
-    if (!recipe) return;
-    // Formatage de la date en YYYY-MM-DD local
-    const dateString = selectedDate.toISOString().split('T')[0];
-    
+    if (!recipe || planLoading) return;
+    setPlanLoading(true);
+    const dateString = toLocalDateString(selectedDate);
     const success = await addToPlanning(recipe, dateString, mealSlot, servings);
+    setPlanLoading(false);
     if (success) {
       setShowModal(false);
       Alert.alert("🎉 Planifié !", `La recette a été ajoutée pour le ${selectedDate.toLocaleDateString('fr-FR')}.`);
@@ -63,7 +69,11 @@ export default function RecipeDetailScreen() {
   );
 
   if (!recipe) return (
-    <View style={styles.center}><Text>Recette introuvable.</Text></View>
+    <View style={styles.center}>
+      <Text style={{ color: '#636E72', fontSize: 16 }}>
+        {errorMsg ?? 'Recette introuvable.'}
+      </Text>
+    </View>
   );
 
   return (
@@ -71,23 +81,37 @@ export default function RecipeDetailScreen() {
       {/* Header Image & Favoris */}
       <View style={styles.imageContainer}>
         <Image source={{ uri: recipe.image }} style={styles.image} />
-        <TouchableOpacity style={styles.favCircle} onPress={handleToggleFavorite}>
-          <Text style={{ fontSize: 24 }}>{isFav ? '❤️' : '🤍'}</Text>
+        <TouchableOpacity
+          style={[styles.favCircle, favLoading && { opacity: 0.5 }]}
+          onPress={handleToggleFavorite}
+          disabled={favLoading}
+        >
+          {favLoading
+            ? <ActivityIndicator size="small" color="#00B894" />
+            : <Text style={{ fontSize: 24 }}>{isFav ? '❤️' : '🤍'}</Text>
+          }
         </TouchableOpacity>
       </View>
       
       <View style={styles.content}>
         <Text style={styles.title}>{isFr && recipe.title_fr ? recipe.title_fr : recipe.title}</Text>
-        <Text style={styles.subtitle}>⏱️ {recipe.readyInMinutes} min  •  🍴 {recipe.servings} portions</Text>
+        <Text style={styles.subtitle}>
+          {recipe.readyInMinutes ? `⏱️ ${recipe.readyInMinutes} min  •  ` : ''}
+          🍴 {recipe.servings} portions
+          {recipe.area ? `  •  🌍 ${recipe.area}` : ''}
+        </Text>
 
         {/* Grille Nutritionnelle */}
         <View style={styles.nutritionGrid}>
-          {recipe.nutrition?.nutrients.slice(0, 4).map((n, i) => (
-            <View key={i} style={styles.nutritionItem}>
-              <Text style={styles.nutriValue}>{Math.round(n.amount)}{n.unit}</Text>
-              <Text style={styles.nutriLabel}>{n.name}</Text>
-            </View>
-          ))}
+          {['Calories', 'Protein', 'Carbohydrates', 'Fat']
+            .map(name => recipe.nutrition?.nutrients.find(n => n.name === name))
+            .filter(Boolean)
+            .map((n, i) => (
+              <View key={i} style={styles.nutritionItem}>
+                <Text style={styles.nutriValue}>{Math.round(n!.amount)}{n!.unit}</Text>
+                <Text style={styles.nutriLabel}>{n!.name}</Text>
+              </View>
+            ))}
         </View>
 
         {/* Instructions */}
@@ -162,8 +186,15 @@ export default function RecipeDetailScreen() {
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)}>
                 <Text style={styles.cancelText}>Annuler</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmBtn} onPress={confirmAddToPlanning}>
-                <Text style={styles.confirmText}>Confirmer</Text>
+              <TouchableOpacity
+                style={[styles.confirmBtn, planLoading && { opacity: 0.7 }]}
+                onPress={confirmAddToPlanning}
+                disabled={planLoading}
+              >
+                {planLoading
+                  ? <ActivityIndicator size="small" color="#FFF" />
+                  : <Text style={styles.confirmText}>Confirmer</Text>
+                }
               </TouchableOpacity>
             </View>
           </View>

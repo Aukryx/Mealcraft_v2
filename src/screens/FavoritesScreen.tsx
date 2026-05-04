@@ -4,9 +4,11 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { getAllFavorites } from '../database/db';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/RootNavigator';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function FavoritesScreen() {
-  const [favorites, setFavorites] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<{ id: number; title: string; title_fr: string | null; image_url: string | null }[]>([]);
+  const { isFr } = useLanguage();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   // On recharge la liste à chaque fois que l'écran devient actif
@@ -26,9 +28,9 @@ export default function FavoritesScreen() {
             style={styles.favCard}
             onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id })}
           >
-            <Image source={{ uri: item.image_url }} style={styles.cardImage} />
+            <Image source={{ uri: item.image_url ?? undefined }} style={styles.cardImage} />
             <View style={styles.cardInfo}>
-              <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+              <Text style={styles.cardTitle} numberOfLines={2}>{isFr && item.title_fr ? item.title_fr : item.title}</Text>
               <Text style={styles.viewMore}>Voir la recette →</Text>
             </View>
           </TouchableOpacity>

@@ -3,6 +3,8 @@ export interface SearchResult {
   title: string;
   title_fr?: string;
   image: string;
+  category?: string;
+  area?: string;
   usedIngredientCount: number;
   missedIngredientCount: number;
 }
@@ -14,7 +16,9 @@ export interface RecipeDetail {
   instructions_fr?: string;
   image: string;
   servings: number;
-  readyInMinutes: number;
+  readyInMinutes?: number;
+  category?: string;
+  area?: string;
   instructions: string;
   summary: string;
   extendedIngredients: {

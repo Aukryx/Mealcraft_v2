@@ -1,5 +1,3 @@
-import 'dotenv/config'; // Charge le fichier .env
-
 export default {
   expo: {
     name: "mealcraft_v2",
@@ -29,8 +27,6 @@ export default {
       "expo-sqlite",
       "@react-native-community/datetimepicker"
     ],
-    extra: {
-      spoonacularApiKey: process.env.SPOONACULAR_API_KEY,
-    }
   }
+
 };

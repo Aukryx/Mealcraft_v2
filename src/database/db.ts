@@ -54,12 +54,19 @@ export const initDatabase = async () => {
         height_cm REAL NOT NULL DEFAULT 175,
         goal TEXT NOT NULL DEFAULT 'maintain'
       );
+
+      -- Table items cochés de la liste de courses (filtrés par semaine)
+      CREATE TABLE IF NOT EXISTS shopping_checked (
+        key TEXT PRIMARY KEY,
+        week_start TEXT NOT NULL
+      );
     `);
 
     // Migrations
     try { await db.execAsync('ALTER TABLE recipes_cache ADD COLUMN ingredients TEXT;'); } catch (_) {}
     try { await db.execAsync('ALTER TABLE recipes_cache ADD COLUMN title_fr TEXT;'); } catch (_) {}
     try { await db.execAsync('ALTER TABLE recipes_cache ADD COLUMN instructions_fr TEXT;'); } catch (_) {}
+    try { await db.execAsync("ALTER TABLE user_profile ADD COLUMN activity TEXT NOT NULL DEFAULT 'moderate';"); } catch (_) {}
     try {
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS app_settings (
@@ -78,15 +85,15 @@ export const initDatabase = async () => {
 
 export const addToPlanning = async (recipe: RecipeDetail, date: string, mealSlot: 'lunch' | 'dinner', servings: number) => {
   try {
-    const calories = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Calories')?.amount);
-    const protein = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Protein')?.amount);
-    const fat = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Fat')?.amount);
-    const carbs = normalizeNutrientValue(recipe.nutrition?.nutrients.find((n: any) => n.name === 'Carbohydrates')?.amount);
+    const calories = normalizeNutrientValue(recipe.nutrition?.nutrients.find(n => n.name === 'Calories')?.amount);
+    const protein = normalizeNutrientValue(recipe.nutrition?.nutrients.find(n => n.name === 'Protein')?.amount);
+    const fat = normalizeNutrientValue(recipe.nutrition?.nutrients.find(n => n.name === 'Fat')?.amount);
+    const carbs = normalizeNutrientValue(recipe.nutrition?.nutrients.find(n => n.name === 'Carbohydrates')?.amount);
 
     await db.runAsync(
       `INSERT INTO planning (date, meal_slot, recipe_id, recipe_title, consumed_servings, calories, protein_g, fat_g, carbs_g)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [date, mealSlot, recipe.id, recipe.title, servings, calories, protein, fat, carbs]
+      [date, mealSlot, recipe.id, recipe.title_fr ?? recipe.title, servings, calories, protein, fat, carbs]
     );
     return true;
   } catch (error) {
@@ -128,9 +135,9 @@ export const getUserProfile = async (): Promise<UserProfileRow | null> => {
 export const saveUserProfile = async (profile: Omit<UserProfileRow, 'id'>): Promise<boolean> => {
   try {
     await db.runAsync(
-      `INSERT OR REPLACE INTO user_profile (id, sex, age, weight_kg, height_cm, goal)
-       VALUES (1, ?, ?, ?, ?, ?)`,
-      [profile.sex, profile.age, profile.weight_kg, profile.height_cm, profile.goal]
+      `INSERT OR REPLACE INTO user_profile (id, sex, age, weight_kg, height_cm, goal, activity)
+       VALUES (1, ?, ?, ?, ?, ?, ?)`,
+      [profile.sex, profile.age, profile.weight_kg, profile.height_cm, profile.goal, profile.activity]
     );
     return true;
   } catch (error) {
@@ -183,13 +190,14 @@ export const getShoppingList = async (startDate: string, endDate: string): Promi
     }>(`
       SELECT
         p.recipe_id,
-        p.recipe_title,
-        p.consumed_servings,
+        MAX(p.recipe_title) as recipe_title,
+        SUM(p.consumed_servings) as consumed_servings,
         r.servings as recipe_servings,
         r.ingredients
       FROM planning p
       JOIN recipes_cache r ON p.recipe_id = r.id
       WHERE p.date BETWEEN ? AND ?
+      GROUP BY p.recipe_id, r.servings, r.ingredients
     `, [startDate, endDate]);
 
     const items: ShoppingIngredient[] = [];
@@ -246,13 +254,37 @@ export const setOnboardingDone = async (): Promise<void> => {
   }
 };
 
-/**
- * Récupère la liste complète avec les infos du cache
- */
-export const getAllFavorites = async () => {
+// --- LISTE DE COURSES : COCHES ---
+
+export const getCheckedShoppingKeys = async (weekStart: string): Promise<string[]> => {
   try {
-    return await db.getAllAsync<any>(`
-      SELECT f.recipe_id as id, r.title, r.image_url 
+    const rows = await db.getAllAsync<{ key: string }>(
+      'SELECT key FROM shopping_checked WHERE week_start = ?', [weekStart]
+    );
+    return rows.map(r => r.key);
+  } catch {
+    return [];
+  }
+};
+
+export const toggleShoppingCheck = async (key: string, weekStart: string, checked: boolean): Promise<void> => {
+  try {
+    if (checked) {
+      await db.runAsync(
+        'INSERT OR REPLACE INTO shopping_checked (key, week_start) VALUES (?, ?)', [key, weekStart]
+      );
+    } else {
+      await db.runAsync('DELETE FROM shopping_checked WHERE key = ?', [key]);
+    }
+  } catch (error) {
+    console.error('❌ Erreur toggleShoppingCheck:', error);
+  }
+};
+
+export const getAllFavorites = async (): Promise<{ id: number; title: string; title_fr: string | null; image_url: string | null }[]> => {
+  try {
+    return await db.getAllAsync<{ id: number; title: string; title_fr: string | null; image_url: string | null }>(`
+      SELECT f.recipe_id as id, r.title, r.title_fr, r.image_url
       FROM favorites f
       JOIN recipes_cache r ON f.recipe_id = r.id
       ORDER BY f.added_at DESC

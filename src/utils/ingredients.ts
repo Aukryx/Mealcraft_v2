@@ -38,7 +38,7 @@ const FR_TO_EN: Record<string, string> = {
   courge: 'squash', potiron: 'pumpkin', citrouille: 'pumpkin',
   'patate douce': 'sweet potato', échalote: 'shallot', echalote: 'shallot',
   ciboulette: 'chives', endive: 'endive', cresson: 'watercress',
-  épinards: 'spinach', mesclun: 'mixed greens', roquette: 'arugula',
+  mesclun: 'mixed greens', roquette: 'arugula',
   potimarron: 'butternut squash', butternut: 'butternut squash',
 
   // Fruits
@@ -91,7 +91,7 @@ const FR_TO_EN: Record<string, string> = {
   'herbes de provence': 'herbes de provence', aneth: 'dill',
   menthe: 'mint', estragon: 'tarragon', sarriette: 'savory',
   marjolaine: 'marjoram', cardamome: 'cardamom', 'clou de girofle': 'clove',
-  anis: 'anise', fenouil: 'fennel seeds',
+  anis: 'anise',
 
   // Condiments & autres
   huile: 'oil', "huile d'olive": 'olive oil', vinaigre: 'vinegar',

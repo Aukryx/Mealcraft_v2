@@ -6,25 +6,25 @@ import { RootStackParamList } from '../navigation/RootNavigator';
 import { getPlanningForDate, removeFromPlanning, getUserProfile } from '../database/db';
 import { PlanningRow } from '../types/database';
 import { calculateGoals, NutritionGoals } from '../utils/tdee';
+import { toLocalDateString } from '../utils/dateUtils';
+
+const getWeekDays = () => {
+  const days = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const date = new Date();
+    date.setDate(today.getDate() + i);
+    days.push({
+      label: date.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', ''),
+      fullDate: toLocalDateString(date),
+      dayNumber: date.getDate()
+    });
+  }
+  return days;
+};
 
 export default function PlanningScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
-  // 1. Génération des 7 prochains jours pour le sélecteur
-  const getWeekDays = () => {
-    const days = [];
-    const today = new Date();
-    for (let i = 0; i < 7; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() + i);
-      days.push({
-        label: date.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', ''),
-        fullDate: date.toISOString().split('T')[0],
-        dayNumber: date.getDate()
-      });
-    }
-    return days;
-  };
 
   const weekDays = useMemo(() => getWeekDays(), []);
   const [selectedDate, setSelectedDate] = useState(weekDays[0].fullDate);

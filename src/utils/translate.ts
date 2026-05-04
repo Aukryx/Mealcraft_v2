@@ -52,36 +52,42 @@ export const translateText = async (
 
   try {
     const chunks = chunkText(text);
-    const translated: string[] = [];
-
-    for (const chunk of chunks) {
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=${from}|${to}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        translated.push(chunk);
-        continue;
-      }
-      const data = await response.json();
-      if (data.responseStatus === 200) {
-        translated.push(data.responseData.translatedText);
-      } else {
-        translated.push(chunk); // fallback sur l'original
-      }
-    }
-
+    const translated = await Promise.all(
+      chunks.map(async (chunk) => {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=${from}|${to}`;
+        try {
+          const response = await fetch(url);
+          if (!response.ok) return chunk;
+          const data = await response.json();
+          return data.responseStatus === 200 ? data.responseData.translatedText : chunk;
+        } catch {
+          return chunk;
+        }
+      })
+    );
     return translated.join(' ');
   } catch {
-    return text; // Toujours fonctionnel même sans traduction
+    return text;
   }
 };
 
 /**
- * Traduit un tableau de textes en parallèle.
+ * Traduit un tableau de textes par lots de 3 pour respecter le rate-limit MyMemory.
  */
 export const translateBatch = async (
   texts: string[],
   from = 'en',
   to = 'fr'
 ): Promise<string[]> => {
-  return Promise.all(texts.map((t) => translateText(t, from, to)));
+  const BATCH_SIZE = 3;
+  const results: string[] = [];
+  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+    const batch = texts.slice(i, i + BATCH_SIZE);
+    const translated = await Promise.all(batch.map((t) => translateText(t, from, to)));
+    results.push(...translated);
+    if (i + BATCH_SIZE < texts.length) {
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  }
+  return results;
 };

@@ -4,8 +4,9 @@ import {
   TouchableOpacity, Share
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { getShoppingList } from '../database/db';
+import { getShoppingList, getCheckedShoppingKeys, toggleShoppingCheck } from '../database/db';
 import { ShoppingIngredient } from '../types/database';
+import { toLocalDateString } from '../utils/dateUtils';
 
 type Section = {
   title: string;
@@ -19,8 +20,8 @@ const getWeekRange = () => {
   const end = new Date();
   end.setDate(today.getDate() + 6);
   return {
-    start: today.toISOString().split('T')[0],
-    end: end.toISOString().split('T')[0],
+    start: toLocalDateString(today),
+    end: toLocalDateString(end),
   };
 };
 
@@ -30,7 +31,10 @@ export default function ShoppingListScreen() {
 
   const loadList = async () => {
     const { start, end } = getWeekRange();
-    const items = await getShoppingList(start, end);
+    const [items, checkedKeys] = await Promise.all([
+      getShoppingList(start, end),
+      getCheckedShoppingKeys(start),
+    ]);
 
     // Grouper par recette
     const map = new Map<number, Section>();
@@ -46,14 +50,18 @@ export default function ShoppingListScreen() {
     }
 
     setSections(Array.from(map.values()));
+    setChecked(new Set(checkedKeys));
   };
 
   useFocusEffect(useCallback(() => { loadList(); }, []));
 
   const toggleCheck = (key: string) => {
+    const willBeChecked = !checked.has(key);
+    const { start } = getWeekRange();
+    toggleShoppingCheck(key, start, willBeChecked);
     setChecked((prev) => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      willBeChecked ? next.add(key) : next.delete(key);
       return next;
     });
   };

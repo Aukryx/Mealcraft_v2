@@ -12,11 +12,19 @@ import { useLanguage } from '../context/LanguageContext';
 
 type Goal = 'loss' | 'maintain' | 'gain';
 type Sex = 'male' | 'female';
+type Activity = 'sedentary' | 'light' | 'moderate' | 'active';
 
 const GOAL_LABELS: Record<Goal, string> = {
   loss:     'Perte de poids',
   maintain: 'Maintien',
   gain:     'Prise de masse',
+};
+
+const ACTIVITY_LABELS: Record<Activity, string> = {
+  sedentary: 'Sédentaire',
+  light:     'Légèrement actif',
+  moderate:  'Modérément actif',
+  active:    'Très actif',
 };
 
 export default function ProfileScreen() {
@@ -25,6 +33,7 @@ export default function ProfileScreen() {
   const [weight, setWeight] = useState('70');
   const [height, setHeight] = useState('175');
   const [goal, setGoal] = useState<Goal>('maintain');
+  const [activity, setActivity] = useState<Activity>('moderate');
   const [saved, setSaved] = useState(false);
   const { language, setLanguage } = useLanguage();
 
@@ -37,6 +46,7 @@ export default function ProfileScreen() {
           setWeight(String(profile.weight_kg));
           setHeight(String(profile.height_cm));
           setGoal(profile.goal);
+          setActivity(profile.activity ?? 'moderate');
           setSaved(true);
         }
       });
@@ -54,7 +64,7 @@ export default function ProfileScreen() {
     }
 
     const profile: Omit<UserProfileRow, 'id'> = {
-      sex, age: ageNum, weight_kg: weightNum, height_cm: heightNum, goal,
+      sex, age: ageNum, weight_kg: weightNum, height_cm: heightNum, goal, activity,
     };
 
     const ok = await saveUserProfile(profile);
@@ -69,7 +79,7 @@ export default function ProfileScreen() {
     const ageNum = parseInt(age) || 25;
     const weightNum = parseFloat(weight) || 70;
     const heightNum = parseFloat(height) || 175;
-    const profile = { id: 1, sex, age: ageNum, weight_kg: weightNum, height_cm: heightNum, goal };
+    const profile = { id: 1, sex, age: ageNum, weight_kg: weightNum, height_cm: heightNum, goal, activity };
     return calculateGoals(profile);
   };
 
@@ -141,6 +151,22 @@ export default function ProfileScreen() {
           >
             <Text style={[styles.goalText, goal === g && styles.goalTextActive]}>
               {GOAL_LABELS[g]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* ACTIVITÉ */}
+      <Text style={styles.label}>Niveau d'activité</Text>
+      <View style={styles.goalRow}>
+        {(Object.keys(ACTIVITY_LABELS) as Activity[]).map((a) => (
+          <TouchableOpacity
+            key={a}
+            style={[styles.goalBtn, activity === a && styles.goalActive]}
+            onPress={() => setActivity(a)}
+          >
+            <Text style={[styles.goalText, activity === a && styles.goalTextActive]}>
+              {ACTIVITY_LABELS[a]}
             </Text>
           </TouchableOpacity>
         ))}
