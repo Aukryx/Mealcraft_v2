@@ -46,4 +46,7 @@ export interface UserProfileRow {
   height_cm: number;
   goal: 'loss' | 'maintain' | 'gain';
   activity: 'sedentary' | 'light' | 'moderate' | 'active';
+  balance_zests?: number;
+  is_premium?: number;
+  last_reset_date?: string | null;
 }

@@ -1,14 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ScrollView, Alert
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
-import { getUserProfile, saveUserProfile } from '../database/db';
+import { getUserProfile, saveUserProfile, resetDatabase } from '../database/db';
 import { calculateGoals } from '../utils/tdee';
 import { UserProfileRow } from '../types/database';
 import { useLanguage } from '../context/LanguageContext';
+import {
+  getZestBalance,
+  watchRewardedAd,
+  DAILY_FREE_QUOTA,
+  PREMIUM_DAILY_CAP,
+} from '../utils/creditManager';
 
 type Goal = 'loss' | 'maintain' | 'gain';
 type Sex = 'male' | 'female';
@@ -35,6 +41,8 @@ export default function ProfileScreen() {
   const [goal, setGoal] = useState<Goal>('maintain');
   const [activity, setActivity] = useState<Activity>('moderate');
   const [saved, setSaved] = useState(false);
+  const [zestBalance, setZestBalance] = useState(DAILY_FREE_QUOTA);
+  const [isPremium, setIsPremium] = useState(false);
   const { language, setLanguage } = useLanguage();
 
   useFocusEffect(
@@ -50,8 +58,18 @@ export default function ProfileScreen() {
           setSaved(true);
         }
       });
+      getZestBalance().then(({ balance, isPremium: premium }) => {
+        setZestBalance(balance);
+        setIsPremium(premium);
+      });
     }, [])
   );
+
+  const handleWatchAd = async () => {
+    const newBalance = await watchRewardedAd();
+    setZestBalance(newBalance);
+    Alert.alert('⚡ +10 Zests !', `Nouveau solde : ${newBalance} Zests.`);
+  };
 
   const handleSave = async () => {
     const ageNum = parseInt(age);
@@ -89,6 +107,33 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.pageTitle}>Mon profil</Text>
       <Text style={styles.pageSubtitle}>Pour calculer tes besoins nutritionnels quotidiens.</Text>
+
+      {/* ZESTS */}
+      <View style={styles.zestCard}>
+        <View style={styles.zestCardLeft}>
+          <Text style={styles.zestCardTitle}>
+            ⚡ Zests  {isPremium && <Text style={styles.premiumBadge}> PRO </Text>}
+          </Text>
+          <Text style={styles.zestCardSub}>
+            {zestBalance} / {isPremium ? PREMIUM_DAILY_CAP : DAILY_FREE_QUOTA} aujourd'hui
+          </Text>
+          <View style={styles.zestBar}>
+            <View style={[
+              styles.zestBarFill,
+              {
+                width: `${Math.min(100, (zestBalance / (isPremium ? PREMIUM_DAILY_CAP : DAILY_FREE_QUOTA)) * 100)}%` as any,
+                backgroundColor: isPremium ? '#6C5CE7' : '#0984E3',
+              }
+            ]} />
+          </View>
+        </View>
+        {!isPremium && (
+          <TouchableOpacity style={styles.adBtn} onPress={handleWatchAd}>
+            <Text style={styles.adBtnText}>+10</Text>
+            <Text style={styles.adBtnSub}>pub</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* SEXE */}
       <Text style={styles.label}>Sexe</Text>
@@ -219,6 +264,19 @@ export default function ProfileScreen() {
           ? 'Les titres et instructions sont traduits automatiquement.'
           : 'Recipes are displayed in their original language.'}
       </Text>
+
+      {/* DEV ONLY */}
+      <TouchableOpacity
+        style={styles.devResetBtn}
+        onPress={() =>
+          Alert.alert('Reset DB', 'Supprimer toutes les données ?', [
+            { text: 'Annuler', style: 'cancel' },
+            { text: 'Supprimer', style: 'destructive', onPress: () => resetDatabase() },
+          ])
+        }
+      >
+        <Text style={styles.devResetText}>DEV — Reset base de données</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -255,5 +313,18 @@ const styles = StyleSheet.create({
 
   saveBtn: { backgroundColor: '#00B894', padding: 16, borderRadius: 14, alignItems: 'center', marginTop: 24, marginBottom: 8 },
   saveBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  langHint: { fontSize: 12, color: '#B2BEC3', marginTop: 8, marginBottom: 40 },
+  langHint: { fontSize: 12, color: '#B2BEC3', marginTop: 8, marginBottom: 16 },
+  devResetBtn: { borderWidth: 1, borderColor: '#FF7675', borderStyle: 'dashed', borderRadius: 10, padding: 12, alignItems: 'center', marginBottom: 40 },
+  devResetText: { color: '#FF7675', fontSize: 13, fontWeight: '600' },
+
+  zestCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: '#E0E0E0' },
+  zestCardLeft: { flex: 1 },
+  zestCardTitle: { fontSize: 15, fontWeight: 'bold', color: '#2D3436', marginBottom: 4 },
+  zestCardSub: { fontSize: 13, color: '#636E72', marginBottom: 10 },
+  premiumBadge: { fontSize: 10, backgroundColor: '#6C5CE7', color: '#FFF', borderRadius: 4, paddingHorizontal: 4 },
+  zestBar: { height: 6, backgroundColor: '#F1F2F6', borderRadius: 3, overflow: 'hidden' },
+  zestBarFill: { height: '100%' as any, borderRadius: 3 },
+  adBtn: { backgroundColor: '#0984E3', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', marginLeft: 12 },
+  adBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  adBtnSub: { color: 'rgba(255,255,255,0.8)', fontSize: 10 },
 });

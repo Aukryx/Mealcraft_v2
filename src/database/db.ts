@@ -60,6 +60,13 @@ export const initDatabase = async () => {
         key TEXT PRIMARY KEY,
         week_start TEXT NOT NULL
       );
+
+      -- Cache requêtes Spoonacular (minimise les appels payants)
+      CREATE TABLE IF NOT EXISTS api_cache (
+        query_hash TEXT PRIMARY KEY,
+        response_json TEXT NOT NULL,
+        timestamp INTEGER NOT NULL
+      );
     `);
 
     // Migrations
@@ -67,6 +74,9 @@ export const initDatabase = async () => {
     try { await db.execAsync('ALTER TABLE recipes_cache ADD COLUMN title_fr TEXT;'); } catch (_) {}
     try { await db.execAsync('ALTER TABLE recipes_cache ADD COLUMN instructions_fr TEXT;'); } catch (_) {}
     try { await db.execAsync("ALTER TABLE user_profile ADD COLUMN activity TEXT NOT NULL DEFAULT 'moderate';"); } catch (_) {}
+    try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN balance_zests INTEGER NOT NULL DEFAULT 20;'); } catch (_) {}
+    try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0;'); } catch (_) {}
+    try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN last_reset_date TEXT;'); } catch (_) {}
     try {
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS app_settings (
@@ -135,8 +145,15 @@ export const getUserProfile = async (): Promise<UserProfileRow | null> => {
 export const saveUserProfile = async (profile: Omit<UserProfileRow, 'id'>): Promise<boolean> => {
   try {
     await db.runAsync(
-      `INSERT OR REPLACE INTO user_profile (id, sex, age, weight_kg, height_cm, goal, activity)
-       VALUES (1, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO user_profile (id, sex, age, weight_kg, height_cm, goal, activity, balance_zests, is_premium, last_reset_date)
+       VALUES (1, ?, ?, ?, ?, ?, ?, 20, 0, NULL)
+       ON CONFLICT(id) DO UPDATE SET
+         sex = excluded.sex,
+         age = excluded.age,
+         weight_kg = excluded.weight_kg,
+         height_cm = excluded.height_cm,
+         goal = excluded.goal,
+         activity = excluded.activity`,
       [profile.sex, profile.age, profile.weight_kg, profile.height_cm, profile.goal, profile.activity]
     );
     return true;
@@ -229,6 +246,20 @@ export const getShoppingList = async (startDate: string, endDate: string): Promi
     console.error("❌ Erreur getShoppingList :", error);
     return [];
   }
+};
+
+// --- DEV ONLY : reset complet de la DB ---
+export const resetDatabase = async (): Promise<void> => {
+  await db.execAsync(`
+    DROP TABLE IF EXISTS planning;
+    DROP TABLE IF EXISTS favorites;
+    DROP TABLE IF EXISTS recipes_cache;
+    DROP TABLE IF EXISTS user_profile;
+    DROP TABLE IF EXISTS shopping_checked;
+    DROP TABLE IF EXISTS app_settings;
+    DROP TABLE IF EXISTS api_cache;
+  `);
+  await initDatabase();
 };
 
 // --- ONBOARDING ---
