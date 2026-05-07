@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import SearchScreen from '../screens/SearchScreen';
 import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 import PlanningScreen from '../screens/PlanningScreen';
@@ -28,7 +29,11 @@ export type TabParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
-function TabNavigator({ route }: any) {
+type TabNavigatorProps = {
+  route: RouteProp<RootStackParamList, 'MainTabs'>;
+};
+
+function TabNavigator({ route }: TabNavigatorProps) {
   const initialTab = route.params?.initialTab ?? 'SearchTab';
   return (
     <Tab.Navigator

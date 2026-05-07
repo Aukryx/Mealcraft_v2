@@ -4,7 +4,7 @@ import { CIQUAL, CiqualEntry } from '../data/ciqualNutrition';
 
 const SKIP_MEASURES = /^(to taste|for garnish|garnish|optional|as needed|season|a pinch|some|a few)/i;
 
-const parseMeasure = (measure: string): { amount: number; unit: string } => {
+export const parseMeasure = (measure: string): { amount: number; unit: string } => {
   const s = measure?.trim() ?? '';
   if (!s || SKIP_MEASURES.test(s)) return { amount: 0, unit: '' };
 
@@ -35,7 +35,7 @@ const parseMeasure = (measure: string): { amount: number; unit: string } => {
   return { amount: 0, unit: '' };
 };
 
-const toGrams = (amount: number, unit: string): number => {
+export const toGrams = (amount: number, unit: string): number => {
   if (amount <= 0) return 0;
   const u = unit.toLowerCase().replace(/s$/, ''); // enlève le pluriel
 
