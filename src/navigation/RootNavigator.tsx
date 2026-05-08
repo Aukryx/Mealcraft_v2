@@ -9,6 +9,7 @@ import PlanningScreen from '../screens/PlanningScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ShoppingListScreen from '../screens/ShoppingListScreen';
+import NutritionScreen from '../screens/NutritionScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import { isOnboardingDone } from '../database/db';
 
@@ -22,6 +23,7 @@ export type RootStackParamList = {
 export type TabParamList = {
   SearchTab: undefined;
   PlanningTab: undefined;
+  NutritionTab: undefined;
   FavoritesTab: undefined;
   ProfileTab: undefined;
 };
@@ -42,6 +44,7 @@ function TabNavigator({ route }: TabNavigatorProps) {
     >
       <Tab.Screen name="SearchTab" component={SearchScreen} options={{ title: 'Recherche', tabBarIcon: () => <Text>🔍</Text> }} />
       <Tab.Screen name="PlanningTab" component={PlanningScreen} options={{ title: 'Planning', tabBarIcon: () => <Text>📅</Text> }} />
+      <Tab.Screen name="NutritionTab" component={NutritionScreen} options={{ title: 'Nutrition', tabBarIcon: () => <Text>📊</Text> }} />
       <Tab.Screen name="FavoritesTab" component={FavoritesScreen} options={{ title: 'Favoris', tabBarIcon: () => <Text>❤️</Text> }} />
       <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profil', tabBarIcon: () => <Text>👤</Text> }} />
     </Tab.Navigator>
