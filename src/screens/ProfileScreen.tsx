@@ -13,8 +13,10 @@ import {
   getZestBalance,
   watchRewardedAd,
   DAILY_FREE_QUOTA,
+  FREE_BALANCE_CAP,
   PREMIUM_DAILY_CAP,
 } from '../utils/creditManager';
+import QuestList from '../components/QuestList';
 
 type Goal = 'loss' | 'maintain' | 'gain';
 type Sex = 'male' | 'female';
@@ -115,13 +117,13 @@ export default function ProfileScreen() {
             ⚡ Zests  {isPremium && <Text style={styles.premiumBadge}> PRO </Text>}
           </Text>
           <Text style={styles.zestCardSub}>
-            {zestBalance} / {isPremium ? PREMIUM_DAILY_CAP : DAILY_FREE_QUOTA} aujourd'hui
+            {zestBalance} / {isPremium ? PREMIUM_DAILY_CAP : FREE_BALANCE_CAP} max
           </Text>
           <View style={styles.zestBar}>
             <View style={[
               styles.zestBarFill,
               {
-                width: `${Math.min(100, (zestBalance / (isPremium ? PREMIUM_DAILY_CAP : DAILY_FREE_QUOTA)) * 100)}%` as any,
+                width: `${Math.min(100, (zestBalance / (isPremium ? PREMIUM_DAILY_CAP : FREE_BALANCE_CAP)) * 100)}%` as any,
                 backgroundColor: isPremium ? '#6C5CE7' : '#0984E3',
               }
             ]} />
@@ -134,6 +136,8 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      <QuestList onClaim={(newBalance) => setZestBalance(newBalance)} />
 
       {/* SEXE */}
       <Text style={styles.label}>Sexe</Text>

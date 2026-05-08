@@ -111,10 +111,7 @@ Pattern try/catch pour ALTER TABLE (pas de système de versions). Sur install fr
 ## Problèmes connus / dette technique
 
 ### Bugs / Comportements inattendus
-- **`initDatabase()` non attendu** (`App.tsx:10`) : l'init est async mais non awaited dans useEffect. Si un écran utilise la DB avant la fin de l'init, les tables pourraient ne pas exister encore.
-- **`FavoritesScreen` ne localise pas les titres** : `getAllFavorites` ne récupère pas `title_fr`. Les favoris affichent toujours le titre anglais, même si `isFr = true`.
-- **État "coché" de la liste de courses non persisté** : `ShoppingListScreen` remet à zéro les items cochés à chaque navigation.
-- **`setErrorMsg` jamais appelé** dans `RecipeDetailScreen` catch block — l'état existe mais n'est pas utilisé en cas d'erreur réseau.
+_(Aucun bug actif — les 4 bugs précédents ont été corrigés dans le commit "fix: bugs mineurs + typage + recalcul semaine Planning")_
 
 ### Performance
 - **`findNutrition` O(n²)** : deux boucles sur `Object.keys(CIQUAL)` par ingrédient. Pour 20 ingrédients × taille CIQUAL. Acceptable actuellement mais à optimiser si CIQUAL grandit.
@@ -122,7 +119,6 @@ Pattern try/catch pour ALTER TABLE (pas de système de versions). Sur install fr
 
 ### Type safety
 - `as unknown as RecipeDetail` dans `recipes.ts:148` (reconstruction depuis le cache)
-- `{ route }: any` dans `TabNavigator` (RootNavigator.tsx:31)
 - `width: ... as any` dans PlanningScreen (pourcentages StyleSheet)
 
 ### UX / Fonctionnel
@@ -134,10 +130,7 @@ Pattern try/catch pour ALTER TABLE (pas de système de versions). Sur install fr
 ## Backlog priorisé
 
 ### Court terme
-1. **Tests unitaires** — Jest sur les fonctions pures (nutritionCalc, creditManager, translate)
-2. **Intégration AdMob réelle** — remplacer `watchRewardedAd()` par `react-native-google-mobile-ads`
-3. **Fix `setErrorMsg`** — le brancher dans le catch block de RecipeDetailScreen
-4. **Fix type `{ route }: any`** — typer correctement TabNavigator dans RootNavigator
+1. **Intégration AdMob réelle** — remplacer `watchRewardedAd()` par `react-native-google-mobile-ads`
 
 ### Moyen terme
 5. **Système de Quêtes** (Phase 1 gamification, faisable 100% local)
@@ -173,7 +166,7 @@ Pattern try/catch pour ALTER TABLE (pas de système de versions). Sur install fr
 | Système Zests + CreditModal | ✅ En prod (simulé) |
 | Spoonacular | ❌ Non migré (table api_cache prête) |
 | AdMob réel | ❌ Simulé uniquement |
-| Tests | ❌ Aucun |
+| Tests | ✅ Jest — 68 tests (nutritionCalc, creditManager, tdee, translate) |
 | Quêtes / Gamification | ❌ Backlog moyen terme |
 
 ## Commandes utiles

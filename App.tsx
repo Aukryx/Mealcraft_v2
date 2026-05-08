@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initDatabase } from './src/database/db';
+import { initQuests, trackDailyOpen } from './src/utils/questManager';
 import RootNavigator from './src/navigation/RootNavigator';
 import { NavigationContainer } from '@react-navigation/native';
 import { LanguageProvider } from './src/context/LanguageContext';
@@ -10,7 +11,7 @@ export default function App() {
   const [dbReady, setDbReady] = useState(false);
 
   useEffect(() => {
-    initDatabase().then(() => setDbReady(true));
+    initDatabase().then(() => trackDailyOpen()).then(() => initQuests()).then(() => setDbReady(true));
   }, []);
 
   if (!dbReady) {

@@ -50,3 +50,15 @@ export interface UserProfileRow {
   is_premium?: number;
   last_reset_date?: string | null;
 }
+
+export interface QuestRow {
+  id: string;
+  type: 'daily' | 'weekly';
+  label: string;
+  target_count: number;
+  current_count: number;
+  reward_zests: number;
+  expires_at: string;
+  completed_at: string | null;
+  claimed_at: string | null;
+}

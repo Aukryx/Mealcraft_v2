@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { normalizeNutrientValue } from '../utils/nutrition';
-import { PlanningRow, UserProfileRow, ShoppingIngredient } from '../types/database';
+import { PlanningRow, UserProfileRow, ShoppingIngredient, QuestRow } from '../types/database';
 import { RecipeDetail } from '../types/api';
 
 // Ouverture de la base de données
@@ -77,11 +77,28 @@ export const initDatabase = async () => {
     try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN balance_zests INTEGER NOT NULL DEFAULT 20;'); } catch (_) {}
     try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN is_premium INTEGER NOT NULL DEFAULT 0;'); } catch (_) {}
     try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN last_reset_date TEXT;'); } catch (_) {}
+    try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN quest_zests INTEGER NOT NULL DEFAULT 0;'); } catch (_) {}
+    try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN quest_zests_expires_at TEXT;'); } catch (_) {}
     try {
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS app_settings (
           key TEXT PRIMARY KEY,
           value TEXT NOT NULL
+        );
+      `);
+    } catch (_) {}
+    try {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS quests (
+          id TEXT PRIMARY KEY,
+          type TEXT NOT NULL,
+          label TEXT NOT NULL,
+          target_count INTEGER NOT NULL,
+          current_count INTEGER NOT NULL DEFAULT 0,
+          reward_zests INTEGER NOT NULL,
+          expires_at TEXT NOT NULL,
+          completed_at TEXT,
+          claimed_at TEXT
         );
       `);
     } catch (_) {}
@@ -309,6 +326,49 @@ export const toggleShoppingCheck = async (key: string, weekStart: string, checke
     }
   } catch (error) {
     console.error('❌ Erreur toggleShoppingCheck:', error);
+  }
+};
+
+// --- QUÊTES ---
+
+export const getQuests = async (): Promise<QuestRow[]> => {
+  try {
+    return await db.getAllAsync<QuestRow>('SELECT * FROM quests');
+  } catch {
+    return [];
+  }
+};
+
+export const upsertQuestRow = async (quest: QuestRow): Promise<void> => {
+  try {
+    await db.runAsync(
+      `INSERT OR REPLACE INTO quests
+         (id, type, label, target_count, current_count, reward_zests, expires_at, completed_at, claimed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [quest.id, quest.type, quest.label, quest.target_count, quest.current_count,
+       quest.reward_zests, quest.expires_at, quest.completed_at, quest.claimed_at]
+    );
+  } catch (error) {
+    console.error('❌ Erreur upsertQuestRow:', error);
+  }
+};
+
+export const setQuestProgress = async (id: string, count: number, completedAt: string | null): Promise<void> => {
+  try {
+    await db.runAsync(
+      'UPDATE quests SET current_count = ?, completed_at = ? WHERE id = ?',
+      [count, completedAt, id]
+    );
+  } catch (error) {
+    console.error('❌ Erreur setQuestProgress:', error);
+  }
+};
+
+export const markQuestClaimed = async (id: string, claimedAt: string): Promise<void> => {
+  try {
+    await db.runAsync('UPDATE quests SET claimed_at = ? WHERE id = ?', [claimedAt, id]);
+  } catch (error) {
+    console.error('❌ Erreur markQuestClaimed:', error);
   }
 };
 
