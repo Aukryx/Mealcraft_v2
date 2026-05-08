@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,35 +6,34 @@ import { RootStackParamList } from '../navigation/RootNavigator';
 import { getPlanningForDate, removeFromPlanning, getUserProfile } from '../database/db';
 import { PlanningRow } from '../types/database';
 import { calculateGoals, NutritionGoals } from '../utils/tdee';
+import { toLocalDateString } from '../utils/dateUtils';
+
+const getWeekDays = () => {
+  const days = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const date = new Date();
+    date.setDate(today.getDate() + i);
+    days.push({
+      label: date.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', ''),
+      fullDate: toLocalDateString(date),
+      dayNumber: date.getDate()
+    });
+  }
+  return days;
+};
 
 export default function PlanningScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  // 1. Génération des 7 prochains jours pour le sélecteur
-  const getWeekDays = () => {
-    const days = [];
-    const today = new Date();
-    for (let i = 0; i < 7; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() + i);
-      days.push({
-        label: date.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', ''),
-        fullDate: date.toISOString().split('T')[0],
-        dayNumber: date.getDate()
-      });
-    }
-    return days;
-  };
-
-  const weekDays = useMemo(() => getWeekDays(), []);
-  const [selectedDate, setSelectedDate] = useState(weekDays[0].fullDate);
+  const [weekDays, setWeekDays] = useState(() => getWeekDays());
+  const [selectedDate, setSelectedDate] = useState(() => toLocalDateString(new Date()));
   const [meals, setMeals] = useState<PlanningRow[]>([]);
   const [goals, setGoals] = useState<NutritionGoals | null>(null);
 
-  // 2. Chargement des données depuis SQLite
-  const loadData = async () => {
+  const loadData = async (date: string) => {
     const [data, profile] = await Promise.all([
-      getPlanningForDate(selectedDate),
+      getPlanningForDate(date),
       getUserProfile(),
     ]);
     setMeals(data);
@@ -43,7 +42,14 @@ export default function PlanningScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      const newWeekDays = getWeekDays();
+      const today = toLocalDateString(new Date());
+      setWeekDays(newWeekDays);
+      // Si le jour sélectionné n'est plus dans la semaine courante (passage de minuit), revenir à aujourd'hui
+      const isStillValid = newWeekDays.some(d => d.fullDate === selectedDate);
+      const activeDate = isStillValid ? selectedDate : today;
+      if (!isStillValid) setSelectedDate(today);
+      loadData(activeDate);
     }, [selectedDate])
   );
 
@@ -60,7 +66,7 @@ export default function PlanningScreen() {
       { text: "Annuler", style: "cancel" },
       { text: "Supprimer", style: "destructive", onPress: async () => {
           await removeFromPlanning(id);
-          loadData();
+          loadData(selectedDate);
       }}
     ]);
   };
@@ -73,7 +79,7 @@ export default function PlanningScreen() {
           <TouchableOpacity 
             key={day.fullDate} 
             style={[styles.dayButton, day.fullDate === selectedDate && styles.daySelected]}
-            onPress={() => setSelectedDate(day.fullDate)}
+            onPress={() => { setSelectedDate(day.fullDate); loadData(day.fullDate); }}
           >
             <Text style={[styles.dayLabel, day.fullDate === selectedDate && styles.textWhite]}>
               {day.label.toUpperCase()}
@@ -177,7 +183,7 @@ export default function PlanningScreen() {
             <Text style={styles.emptyText}>Aucun repas prévu pour ce jour.</Text>
             <TouchableOpacity 
               style={styles.addBtn}
-              onPress={() => navigation.navigate('MainTabs')}
+              onPress={() => navigation.navigate('MainTabs', { initialTab: 'SearchTab' })}
             >
               <Text style={styles.addBtnText}>Ajouter une recette</Text>
             </TouchableOpacity>

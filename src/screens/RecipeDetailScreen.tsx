@@ -1,59 +1,126 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  View, Text, ScrollView, Image, StyleSheet, ActivityIndicator, 
-  TouchableOpacity, Alert, Modal, Platform 
+import {
+  View, Text, ScrollView, Image, StyleSheet, ActivityIndicator,
+  TouchableOpacity, Alert, Modal, Platform
 } from 'react-native';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { getRecipeInformation } from '../api/recipes';
 import { RecipeDetail } from '../types/api';
 import { addToPlanning, isFavorite, toggleFavorite } from '../database/db';
+import { useLanguage } from '../context/LanguageContext';
+import { toLocalDateString } from '../utils/dateUtils';
+import { getZestBalance, debitZests, watchRewardedAd, PLANNING_COST } from '../utils/creditManager';
+import { initQuests } from '../utils/questManager';
+import CreditModal from '../components/CreditModal';
 
 export default function RecipeDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'RecipeDetail'>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { recipeId } = route.params;
-  
+
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isFav, setIsFav] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
 
-  // States pour le Planning & Modal
   const [servings, setServings] = useState(1);
   const [showModal, setShowModal] = useState(false);
+  const [planLoading, setPlanLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [mealSlot, setMealSlot] = useState<'lunch' | 'dinner'>('lunch');
 
-  useEffect(() => {
-    Promise.all([
-      getRecipeInformation(recipeId),
-      isFavorite(recipeId)
-    ]).then(([recipeData, favStatus]) => {
+  const [zestBalance, setZestBalance] = useState(0);
+  const [showCreditModal, setShowCreditModal] = useState(false);
+
+  const { isFr } = useLanguage();
+
+  const loadRecipe = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const [recipeData, favStatus, { balance }] = await Promise.all([
+        getRecipeInformation(recipeId),
+        isFavorite(recipeId),
+        getZestBalance(),
+      ]);
+      if (!recipeData) {
+        setErrorMsg('Impossible de charger la recette. Vérifiez votre connexion.');
+      }
       setRecipe(recipeData);
       setIsFav(favStatus);
+      setZestBalance(balance);
+    } catch {
+      setErrorMsg('Impossible de charger la recette. Vérifiez votre connexion.');
+    } finally {
       setLoading(false);
-    }).catch(err => {
-      console.error(err);
-      setLoading(false);
-    });
+    }
+  };
+
+  useEffect(() => {
+    loadRecipe();
   }, [recipeId]);
 
   const handleToggleFavorite = async () => {
+    if (favLoading) return;
+    setFavLoading(true);
     const newState = await toggleFavorite(recipeId);
     setIsFav(newState);
+    setFavLoading(false);
+  };
+
+  const handleOpenPlanning = () => {
+    setShowModal(true);
   };
 
   const confirmAddToPlanning = async () => {
-    if (!recipe) return;
-    // Formatage de la date en YYYY-MM-DD local
-    const dateString = selectedDate.toISOString().split('T')[0];
-    
-    const success = await addToPlanning(recipe, dateString, mealSlot, servings);
-    if (success) {
+    if (!recipe || planLoading) return;
+
+    if (zestBalance < PLANNING_COST) {
       setShowModal(false);
-      Alert.alert("🎉 Planifié !", `La recette a été ajoutée pour le ${selectedDate.toLocaleDateString('fr-FR')}.`);
+      setShowCreditModal(true);
+      return;
     }
+
+    const debited = await debitZests(PLANNING_COST);
+    if (!debited) {
+      setShowModal(false);
+      setShowCreditModal(true);
+      return;
+    }
+
+    setZestBalance(prev => Math.max(0, prev - PLANNING_COST));
+    setPlanLoading(true);
+    const dateString = toLocalDateString(selectedDate);
+    const success = await addToPlanning(recipe, dateString, mealSlot, servings);
+    setPlanLoading(false);
+
+    if (success) {
+      initQuests();
+      setShowModal(false);
+      Alert.alert(
+        'Planifié !',
+        `La recette a été ajoutée pour le ${selectedDate.toLocaleDateString('fr-FR')}.`
+      );
+    }
+  };
+
+  const handleWatchAd = async () => {
+    setShowCreditModal(false);
+    const newBalance = await watchRewardedAd();
+    setZestBalance(newBalance);
+    if (newBalance >= PLANNING_COST) {
+      setShowModal(true);
+    }
+  };
+
+  const handleGoPremium = () => {
+    setShowCreditModal(false);
+    navigation.navigate('MainTabs', { initialTab: 'ProfileTab' } as any);
   };
 
   if (loading) return (
@@ -61,44 +128,64 @@ export default function RecipeDetailScreen() {
   );
 
   if (!recipe) return (
-    <View style={styles.center}><Text>Recette introuvable.</Text></View>
+    <View style={styles.center}>
+      <Text style={styles.errorText}>{errorMsg ?? 'Recette introuvable.'}</Text>
+      {errorMsg && (
+        <TouchableOpacity style={styles.retryBtn} onPress={loadRecipe}>
+          <Text style={styles.retryBtnText}>Réessayer</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header Image & Favoris */}
       <View style={styles.imageContainer}>
         <Image source={{ uri: recipe.image }} style={styles.image} />
-        <TouchableOpacity style={styles.favCircle} onPress={handleToggleFavorite}>
-          <Text style={{ fontSize: 24 }}>{isFav ? '❤️' : '🤍'}</Text>
+        <TouchableOpacity
+          style={[styles.favCircle, favLoading && { opacity: 0.5 }]}
+          onPress={handleToggleFavorite}
+          disabled={favLoading}
+        >
+          {favLoading
+            ? <ActivityIndicator size="small" color="#00B894" />
+            : <Text style={{ fontSize: 24 }}>{isFav ? '❤️' : '🤍'}</Text>
+          }
         </TouchableOpacity>
       </View>
-      
-      <View style={styles.content}>
-        <Text style={styles.title}>{recipe.title}</Text>
-        <Text style={styles.subtitle}>⏱️ {recipe.readyInMinutes} min  •  🍴 {recipe.servings} portions</Text>
 
-        {/* Grille Nutritionnelle */}
+      <View style={styles.content}>
+        <Text style={styles.title}>{isFr && recipe.title_fr ? recipe.title_fr : recipe.title}</Text>
+        <Text style={styles.subtitle}>
+          {recipe.readyInMinutes ? `⏱️ ${recipe.readyInMinutes} min  •  ` : ''}
+          🍴 {recipe.servings} portions
+          {recipe.area ? `  •  🌍 ${recipe.area}` : ''}
+        </Text>
+
         <View style={styles.nutritionGrid}>
-          {recipe.nutrition?.nutrients.slice(0, 4).map((n, i) => (
-            <View key={i} style={styles.nutritionItem}>
-              <Text style={styles.nutriValue}>{Math.round(n.amount)}{n.unit}</Text>
-              <Text style={styles.nutriLabel}>{n.name}</Text>
-            </View>
-          ))}
+          {['Calories', 'Protein', 'Carbohydrates', 'Fat']
+            .map(name => recipe.nutrition?.nutrients.find(n => n.name === name))
+            .filter(Boolean)
+            .map((n, i) => (
+              <View key={i} style={styles.nutritionItem}>
+                <Text style={styles.nutriValue}>{Math.round(n!.amount)}{n!.unit}</Text>
+                <Text style={styles.nutriLabel}>{n!.name}</Text>
+              </View>
+            ))}
         </View>
 
-        {/* Instructions */}
         <Text style={styles.sectionTitle}>Instructions</Text>
         <Text style={styles.instructions}>
-          {(recipe.instructions ?? "Aucune instruction disponible.")
+          {((isFr && recipe.instructions_fr ? recipe.instructions_fr : recipe.instructions)
+            ?? 'Aucune instruction disponible.')
             .replace(/<[^>]*>?/gm, '')}
         </Text>
 
         <View style={styles.divider} />
 
-        <TouchableOpacity style={styles.mainPlanBtn} onPress={() => setShowModal(true)}>
-          <Text style={styles.mainPlanBtnText}>Ajouter au Planning 📅</Text>
+        <TouchableOpacity style={styles.mainPlanBtn} onPress={handleOpenPlanning}>
+          <Text style={styles.mainPlanBtnText}>Ajouter au Planning  📅</Text>
+          <Text style={styles.mainPlanBtnCost}>⚡ {PLANNING_COST} Zests</Text>
         </TouchableOpacity>
       </View>
 
@@ -108,7 +195,6 @@ export default function RecipeDetailScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Planifier mon repas</Text>
 
-            {/* 1. Sélecteur de portions */}
             <Text style={styles.modalLabel}>Combien de portions ?</Text>
             <View style={styles.servingsRow}>
               <TouchableOpacity onPress={() => setServings(Math.max(1, servings - 1))} style={styles.stepBtn}>
@@ -120,10 +206,11 @@ export default function RecipeDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* 2. Sélecteur de Date */}
             <Text style={styles.modalLabel}>Pour quel jour ?</Text>
             <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowDatePicker(true)}>
-              <Text style={styles.dateText}>{selectedDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+              <Text style={styles.dateText}>
+                {selectedDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </Text>
             </TouchableOpacity>
 
             {showDatePicker && (
@@ -138,41 +225,63 @@ export default function RecipeDetailScreen() {
               />
             )}
 
-            {/* 3. Choix Midi / Soir */}
             <View style={styles.slotRow}>
-              <TouchableOpacity 
-                style={[styles.slotBtn, mealSlot === 'lunch' && styles.slotActive]} 
+              <TouchableOpacity
+                style={[styles.slotBtn, mealSlot === 'lunch' && styles.slotActive]}
                 onPress={() => setMealSlot('lunch')}
               >
                 <Text style={[styles.slotBtnText, mealSlot === 'lunch' && styles.textWhite]}>☀️ Midi</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.slotBtn, mealSlot === 'dinner' && styles.slotActive]} 
+              <TouchableOpacity
+                style={[styles.slotBtn, mealSlot === 'dinner' && styles.slotActive]}
                 onPress={() => setMealSlot('dinner')}
               >
                 <Text style={[styles.slotBtnText, mealSlot === 'dinner' && styles.textWhite]}>🌙 Soir</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Actions finales */}
             <View style={styles.footerActions}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)}>
                 <Text style={styles.cancelText}>Annuler</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmBtn} onPress={confirmAddToPlanning}>
-                <Text style={styles.confirmText}>Confirmer</Text>
+              <TouchableOpacity
+                style={[styles.confirmBtn, planLoading && { opacity: 0.7 }]}
+                onPress={confirmAddToPlanning}
+                disabled={planLoading}
+              >
+                {planLoading
+                  ? <ActivityIndicator size="small" color="#FFF" />
+                  : (
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={styles.confirmText}>Confirmer</Text>
+                      <Text style={styles.confirmCost}>⚡ {PLANNING_COST} Zests</Text>
+                    </View>
+                  )
+                }
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
+      <CreditModal
+        visible={showCreditModal}
+        onClose={() => setShowCreditModal(false)}
+        onWatchAd={handleWatchAd}
+        onGoPremium={handleGoPremium}
+        balance={zestBalance}
+        cost={PLANNING_COST}
+      />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  errorText: { color: '#636E72', fontSize: 16, textAlign: 'center', marginBottom: 20 },
+  retryBtn: { backgroundColor: '#0984E3', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 },
+  retryBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 15 },
   imageContainer: { position: 'relative' },
   image: { width: '100%', height: 260 },
   favCircle: {
@@ -192,8 +301,8 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: '#F1F2F6', marginVertical: 25 },
   mainPlanBtn: { backgroundColor: '#00B894', padding: 18, borderRadius: 15, alignItems: 'center' },
   mainPlanBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  mainPlanBtnCost: { color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 3 },
 
-  // Styles Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25 },
   modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
@@ -214,4 +323,5 @@ const styles = StyleSheet.create({
   cancelText: { color: '#FF7675', fontWeight: 'bold' },
   confirmBtn: { flex: 0.55, backgroundColor: '#00B894', padding: 15, borderRadius: 12, alignItems: 'center' },
   confirmText: { color: '#FFF', fontWeight: 'bold' },
+  confirmCost: { color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 2 },
 });

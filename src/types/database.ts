@@ -1,11 +1,13 @@
 export interface RecipeCacheRow {
   id: number;
   title: string;
+  title_fr: string | null;
   image_url: string | null;
   servings: number;
-  instructions: string; // JSON sérialisé
-  nutrition: string;    // JSON sérialisé
-  ingredients: string;  // JSON sérialisé (extendedIngredients)
+  instructions: string;  // JSON sérialisé
+  instructions_fr: string | null;
+  nutrition: string;     // JSON sérialisé
+  ingredients: string;   // JSON sérialisé (extendedIngredients)
   updated_at: string;
 }
 
@@ -43,4 +45,20 @@ export interface UserProfileRow {
   weight_kg: number;
   height_cm: number;
   goal: 'loss' | 'maintain' | 'gain';
+  activity: 'sedentary' | 'light' | 'moderate' | 'active';
+  balance_zests?: number;
+  is_premium?: number;
+  last_reset_date?: string | null;
+}
+
+export interface QuestRow {
+  id: string;
+  type: 'daily' | 'weekly';
+  label: string;
+  target_count: number;
+  current_count: number;
+  reward_zests: number;
+  expires_at: string;
+  completed_at: string | null;
+  claimed_at: string | null;
 }

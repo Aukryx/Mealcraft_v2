@@ -10,9 +10,15 @@ const calculateBMR = (profile: UserProfileRow): number => {
   }
 };
 
-// Activité modérée (PAL 1.55) — bon compromis par défaut
+const PAL: Record<UserProfileRow['activity'], number> = {
+  sedentary: 1.2,
+  light:     1.375,
+  moderate:  1.55,
+  active:    1.725,
+};
+
 export const calculateTDEE = (profile: UserProfileRow): number => {
-  return Math.round(calculateBMR(profile) * 1.55);
+  return Math.round(calculateBMR(profile) * PAL[profile.activity]);
 };
 
 export interface NutritionGoals {

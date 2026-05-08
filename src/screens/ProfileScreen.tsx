@@ -1,21 +1,38 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, ScrollView, Alert
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
-import { getUserProfile, saveUserProfile } from '../database/db';
-import { calculateGoals, calculateTDEE } from '../utils/tdee';
+import { getUserProfile, saveUserProfile, resetDatabase } from '../database/db';
+import { calculateGoals } from '../utils/tdee';
 import { UserProfileRow } from '../types/database';
+import { useLanguage } from '../context/LanguageContext';
+import {
+  getZestBalance,
+  watchRewardedAd,
+  DAILY_FREE_QUOTA,
+  FREE_BALANCE_CAP,
+  PREMIUM_DAILY_CAP,
+} from '../utils/creditManager';
+import QuestList from '../components/QuestList';
 
 type Goal = 'loss' | 'maintain' | 'gain';
 type Sex = 'male' | 'female';
+type Activity = 'sedentary' | 'light' | 'moderate' | 'active';
 
 const GOAL_LABELS: Record<Goal, string> = {
   loss:     'Perte de poids',
   maintain: 'Maintien',
   gain:     'Prise de masse',
+};
+
+const ACTIVITY_LABELS: Record<Activity, string> = {
+  sedentary: 'Sédentaire',
+  light:     'Légèrement actif',
+  moderate:  'Modérément actif',
+  active:    'Très actif',
 };
 
 export default function ProfileScreen() {
@@ -24,7 +41,11 @@ export default function ProfileScreen() {
   const [weight, setWeight] = useState('70');
   const [height, setHeight] = useState('175');
   const [goal, setGoal] = useState<Goal>('maintain');
+  const [activity, setActivity] = useState<Activity>('moderate');
   const [saved, setSaved] = useState(false);
+  const [zestBalance, setZestBalance] = useState(DAILY_FREE_QUOTA);
+  const [isPremium, setIsPremium] = useState(false);
+  const { language, setLanguage } = useLanguage();
 
   useFocusEffect(
     useCallback(() => {
@@ -35,11 +56,22 @@ export default function ProfileScreen() {
           setWeight(String(profile.weight_kg));
           setHeight(String(profile.height_cm));
           setGoal(profile.goal);
+          setActivity(profile.activity ?? 'moderate');
           setSaved(true);
         }
       });
+      getZestBalance().then(({ balance, isPremium: premium }) => {
+        setZestBalance(balance);
+        setIsPremium(premium);
+      });
     }, [])
   );
+
+  const handleWatchAd = async () => {
+    const newBalance = await watchRewardedAd();
+    setZestBalance(newBalance);
+    Alert.alert('⚡ +10 Zests !', `Nouveau solde : ${newBalance} Zests.`);
+  };
 
   const handleSave = async () => {
     const ageNum = parseInt(age);
@@ -52,13 +84,14 @@ export default function ProfileScreen() {
     }
 
     const profile: Omit<UserProfileRow, 'id'> = {
-      sex, age: ageNum, weight_kg: weightNum, height_cm: heightNum, goal,
+      sex, age: ageNum, weight_kg: weightNum, height_cm: heightNum, goal, activity,
     };
 
     const ok = await saveUserProfile(profile);
     if (ok) {
       setSaved(true);
-      Alert.alert('✅ Profil sauvegardé !', `Objectif calorique : ${calculateTDEE(profile as UserProfileRow)} kcal/jour`);
+      const goals = calculateGoals(profile as UserProfileRow);
+      Alert.alert('✅ Profil sauvegardé !', `Objectif calorique : ${goals.calories} kcal/jour`);
     }
   };
 
@@ -66,7 +99,7 @@ export default function ProfileScreen() {
     const ageNum = parseInt(age) || 25;
     const weightNum = parseFloat(weight) || 70;
     const heightNum = parseFloat(height) || 175;
-    const profile = { id: 1, sex, age: ageNum, weight_kg: weightNum, height_cm: heightNum, goal };
+    const profile = { id: 1, sex, age: ageNum, weight_kg: weightNum, height_cm: heightNum, goal, activity };
     return calculateGoals(profile);
   };
 
@@ -76,6 +109,35 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.pageTitle}>Mon profil</Text>
       <Text style={styles.pageSubtitle}>Pour calculer tes besoins nutritionnels quotidiens.</Text>
+
+      {/* ZESTS */}
+      <View style={styles.zestCard}>
+        <View style={styles.zestCardLeft}>
+          <Text style={styles.zestCardTitle}>
+            ⚡ Zests  {isPremium && <Text style={styles.premiumBadge}> PRO </Text>}
+          </Text>
+          <Text style={styles.zestCardSub}>
+            {zestBalance} / {isPremium ? PREMIUM_DAILY_CAP : FREE_BALANCE_CAP} max
+          </Text>
+          <View style={styles.zestBar}>
+            <View style={[
+              styles.zestBarFill,
+              {
+                width: `${Math.min(100, (zestBalance / (isPremium ? PREMIUM_DAILY_CAP : FREE_BALANCE_CAP)) * 100)}%` as any,
+                backgroundColor: isPremium ? '#6C5CE7' : '#0984E3',
+              }
+            ]} />
+          </View>
+        </View>
+        {!isPremium && (
+          <TouchableOpacity style={styles.adBtn} onPress={handleWatchAd}>
+            <Text style={styles.adBtnText}>+10</Text>
+            <Text style={styles.adBtnSub}>pub</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <QuestList onClaim={(newBalance) => setZestBalance(newBalance)} />
 
       {/* SEXE */}
       <Text style={styles.label}>Sexe</Text>
@@ -143,6 +205,22 @@ export default function ProfileScreen() {
         ))}
       </View>
 
+      {/* ACTIVITÉ */}
+      <Text style={styles.label}>Niveau d'activité</Text>
+      <View style={styles.goalRow}>
+        {(Object.keys(ACTIVITY_LABELS) as Activity[]).map((a) => (
+          <TouchableOpacity
+            key={a}
+            style={[styles.goalBtn, activity === a && styles.goalActive]}
+            onPress={() => setActivity(a)}
+          >
+            <Text style={[styles.goalText, activity === a && styles.goalTextActive]}>
+              {ACTIVITY_LABELS[a]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {/* APERÇU DES OBJECTIFS */}
       <View style={styles.previewCard}>
         <Text style={styles.previewTitle}>Objectifs estimés / jour</Text>
@@ -168,6 +246,40 @@ export default function ProfileScreen() {
 
       <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
         <Text style={styles.saveBtnText}>{saved ? 'Mettre à jour' : 'Enregistrer'}</Text>
+      </TouchableOpacity>
+
+      {/* LANGUE */}
+      <Text style={styles.label}>Langue des recettes</Text>
+      <View style={styles.toggleRow}>
+        {(['fr', 'en'] as const).map((lang) => (
+          <TouchableOpacity
+            key={lang}
+            style={[styles.toggleBtn, language === lang && styles.toggleActive]}
+            onPress={() => setLanguage(lang)}
+          >
+            <Text style={[styles.toggleText, language === lang && styles.toggleTextActive]}>
+              {lang === 'fr' ? '🇫🇷  Français' : '🇬🇧  English'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={styles.langHint}>
+        {language === 'fr'
+          ? 'Les titres et instructions sont traduits automatiquement.'
+          : 'Recipes are displayed in their original language.'}
+      </Text>
+
+      {/* DEV ONLY */}
+      <TouchableOpacity
+        style={styles.devResetBtn}
+        onPress={() =>
+          Alert.alert('Reset DB', 'Supprimer toutes les données ?', [
+            { text: 'Annuler', style: 'cancel' },
+            { text: 'Supprimer', style: 'destructive', onPress: () => resetDatabase() },
+          ])
+        }
+      >
+        <Text style={styles.devResetText}>DEV — Reset base de données</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -203,6 +315,20 @@ const styles = StyleSheet.create({
   previewValue: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
   previewLabel: { color: '#FFF', opacity: 0.6, fontSize: 11, marginTop: 2 },
 
-  saveBtn: { backgroundColor: '#00B894', padding: 16, borderRadius: 14, alignItems: 'center', marginTop: 24, marginBottom: 40 },
+  saveBtn: { backgroundColor: '#00B894', padding: 16, borderRadius: 14, alignItems: 'center', marginTop: 24, marginBottom: 8 },
   saveBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  langHint: { fontSize: 12, color: '#B2BEC3', marginTop: 8, marginBottom: 16 },
+  devResetBtn: { borderWidth: 1, borderColor: '#FF7675', borderStyle: 'dashed', borderRadius: 10, padding: 12, alignItems: 'center', marginBottom: 40 },
+  devResetText: { color: '#FF7675', fontSize: 13, fontWeight: '600' },
+
+  zestCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: '#E0E0E0' },
+  zestCardLeft: { flex: 1 },
+  zestCardTitle: { fontSize: 15, fontWeight: 'bold', color: '#2D3436', marginBottom: 4 },
+  zestCardSub: { fontSize: 13, color: '#636E72', marginBottom: 10 },
+  premiumBadge: { fontSize: 10, backgroundColor: '#6C5CE7', color: '#FFF', borderRadius: 4, paddingHorizontal: 4 },
+  zestBar: { height: 6, backgroundColor: '#F1F2F6', borderRadius: 3, overflow: 'hidden' },
+  zestBarFill: { height: '100%' as any, borderRadius: 3 },
+  adBtn: { backgroundColor: '#0984E3', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', marginLeft: 12 },
+  adBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  adBtnSub: { color: 'rgba(255,255,255,0.8)', fontSize: 10 },
 });
