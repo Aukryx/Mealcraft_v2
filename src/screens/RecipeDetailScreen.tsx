@@ -14,6 +14,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { toLocalDateString } from '../utils/dateUtils';
 import { getZestBalance, debitZests, watchRewardedAd, PLANNING_COST } from '../utils/creditManager';
 import { initQuests } from '../utils/questManager';
+import { addMealXP } from '../utils/xpManager';
 import CreditModal from '../components/CreditModal';
 
 export default function RecipeDetailScreen() {
@@ -101,6 +102,7 @@ export default function RecipeDetailScreen() {
 
     if (success) {
       initQuests();
+      addMealXP();
       setShowModal(false);
       Alert.alert(
         'Planifié !',

@@ -49,6 +49,9 @@ export interface UserProfileRow {
   balance_zests?: number;
   is_premium?: number;
   last_reset_date?: string | null;
+  xp?: number;
+  streak_days?: number;
+  last_planning_date?: string | null;
 }
 
 export interface QuestRow {

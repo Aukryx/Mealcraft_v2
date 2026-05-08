@@ -16,6 +16,7 @@ import {
   FREE_BALANCE_CAP,
   PREMIUM_DAILY_CAP,
 } from '../utils/creditManager';
+import { getLevelInfo, LevelInfo } from '../utils/xpManager';
 import QuestList from '../components/QuestList';
 
 type Goal = 'loss' | 'maintain' | 'gain';
@@ -45,6 +46,8 @@ export default function ProfileScreen() {
   const [saved, setSaved] = useState(false);
   const [zestBalance, setZestBalance] = useState(DAILY_FREE_QUOTA);
   const [isPremium, setIsPremium] = useState(false);
+  const [levelInfo, setLevelInfo] = useState<LevelInfo>(getLevelInfo(0));
+  const [streakDays, setStreakDays] = useState(0);
   const { language, setLanguage } = useLanguage();
 
   useFocusEffect(
@@ -58,6 +61,8 @@ export default function ProfileScreen() {
           setGoal(profile.goal);
           setActivity(profile.activity ?? 'moderate');
           setSaved(true);
+          setLevelInfo(getLevelInfo(profile.xp ?? 0));
+          setStreakDays(profile.streak_days ?? 0);
         }
       });
       getZestBalance().then(({ balance, isPremium: premium }) => {
@@ -135,6 +140,29 @@ export default function ProfileScreen() {
             <Text style={styles.adBtnSub}>pub</Text>
           </TouchableOpacity>
         )}
+      </View>
+
+      {/* NIVEAU & STREAK */}
+      <View style={styles.levelCard}>
+        <View style={styles.levelBadgeBox}>
+          <Text style={styles.levelNum}>Niv.{levelInfo.level}</Text>
+        </View>
+        <View style={styles.levelMid}>
+          <Text style={styles.levelTitle}>{levelInfo.title}</Text>
+          <Text style={styles.levelXPText}>
+            {levelInfo.nextLevelXP
+              ? `${levelInfo.xp} / ${levelInfo.nextLevelXP} XP`
+              : `${levelInfo.xp} XP — Niveau max !`}
+          </Text>
+          <View style={styles.xpBarTrack}>
+            <View style={[styles.xpBarFill, { width: `${Math.round(levelInfo.progress * 100)}%` as any }]} />
+          </View>
+        </View>
+        <View style={styles.streakBox}>
+          <Text style={styles.streakEmoji}>🔥</Text>
+          <Text style={styles.streakNum}>{streakDays}</Text>
+          <Text style={styles.streakLabel}>jour{streakDays > 1 ? 's' : ''}</Text>
+        </View>
       </View>
 
       <QuestList onClaim={(newBalance) => setZestBalance(newBalance)} />
@@ -331,4 +359,17 @@ const styles = StyleSheet.create({
   adBtn: { backgroundColor: '#0984E3', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', marginLeft: 12 },
   adBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
   adBtnSub: { color: 'rgba(255,255,255,0.8)', fontSize: 10 },
+
+  levelCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 16, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#E0E0E0', gap: 12 },
+  levelBadgeBox: { backgroundColor: '#6C5CE7', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, alignItems: 'center', minWidth: 52 },
+  levelNum: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
+  levelMid: { flex: 1 },
+  levelTitle: { fontSize: 14, fontWeight: 'bold', color: '#2D3436', marginBottom: 2 },
+  levelXPText: { fontSize: 11, color: '#636E72', marginBottom: 6 },
+  xpBarTrack: { height: 6, backgroundColor: '#F1F2F6', borderRadius: 3, overflow: 'hidden' },
+  xpBarFill: { height: 6, backgroundColor: '#6C5CE7', borderRadius: 3 },
+  streakBox: { alignItems: 'center', minWidth: 44 },
+  streakEmoji: { fontSize: 20 },
+  streakNum: { fontSize: 16, fontWeight: 'bold', color: '#2D3436' },
+  streakLabel: { fontSize: 10, color: '#636E72' },
 });

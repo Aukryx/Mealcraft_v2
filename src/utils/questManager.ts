@@ -1,5 +1,6 @@
 import { db, getQuests, upsertQuestRow, setQuestProgress, markQuestClaimed, getUserProfile } from '../database/db';
 import { creditQuestZests } from './creditManager';
+import { addQuestXP } from './xpManager';
 import { toLocalDateString } from './dateUtils';
 import { calculateGoals } from './tdee';
 import { QuestRow } from '../types/database';
@@ -197,6 +198,7 @@ export const claimQuest = async (id: string): Promise<number> => {
 
   const today = toLocalDateString(new Date());
   await markQuestClaimed(id, today);
+  addQuestXP();
   return creditQuestZests(quest.reward_zests);
 };
 

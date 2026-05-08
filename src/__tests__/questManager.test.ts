@@ -15,6 +15,10 @@ jest.mock('../utils/creditManager', () => ({
   creditQuestZests: jest.fn().mockResolvedValue(50),
 }));
 
+jest.mock('../utils/xpManager', () => ({
+  addQuestXP: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('../utils/tdee', () => ({
   calculateGoals: jest.fn().mockReturnValue({ calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 67 }),
 }));

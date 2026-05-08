@@ -79,6 +79,9 @@ export const initDatabase = async () => {
     try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN last_reset_date TEXT;'); } catch (_) {}
     try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN quest_zests INTEGER NOT NULL DEFAULT 0;'); } catch (_) {}
     try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN quest_zests_expires_at TEXT;'); } catch (_) {}
+    try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN xp INTEGER NOT NULL DEFAULT 0;'); } catch (_) {}
+    try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN streak_days INTEGER NOT NULL DEFAULT 0;'); } catch (_) {}
+    try { await db.execAsync('ALTER TABLE user_profile ADD COLUMN last_planning_date TEXT;'); } catch (_) {}
     try {
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS app_settings (
@@ -369,6 +372,27 @@ export const markQuestClaimed = async (id: string, claimedAt: string): Promise<v
     await db.runAsync('UPDATE quests SET claimed_at = ? WHERE id = ?', [claimedAt, id]);
   } catch (error) {
     console.error('❌ Erreur markQuestClaimed:', error);
+  }
+};
+
+// --- XP & STREAK ---
+
+export const addXP = async (amount: number): Promise<void> => {
+  try {
+    await db.runAsync('UPDATE user_profile SET xp = xp + ? WHERE id = 1', [amount]);
+  } catch (error) {
+    console.error('❌ Erreur addXP:', error);
+  }
+};
+
+export const setPlanningStreak = async (streakDays: number, lastDate: string): Promise<void> => {
+  try {
+    await db.runAsync(
+      'UPDATE user_profile SET streak_days = ?, last_planning_date = ? WHERE id = 1',
+      [streakDays, lastDate]
+    );
+  } catch (error) {
+    console.error('❌ Erreur setPlanningStreak:', error);
   }
 };
 
